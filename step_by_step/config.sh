@@ -46,15 +46,30 @@ fail()  { printf '\033[1;31mERROR:\033[0m %s\n' "$*" >&2; exit 1; }
 # ------------------------------------------------------------------- container images
 # The image of a pipeline process (FASTP, SHOVILL, ...), looked up in the shared folder's MANIFEST.tsv
 # (written by bin/prepare_shared_containers.sh). Override one with IMG_<PROCESS>=/path/image.sif.
+# Processes that share another process's image are looked up under that process too, so an older
+# MANIFEST.tsv (written before these processes were added) still works.
+declare -A SAME_IMAGE_AS=(
+    [KAPTIVE]=KLEBORATE                       # Kaptive is installed with Kleborate
+    [SNIPPY_CONTIGS]=SNIPPY_RUN               # all Snippy steps use the Snippy 4.6.0 image
+    [SNIPPY_CLEAN]=SNIPPY_RUN
+    [SNIPPY_CORE]=SNIPPY_RUN
+    [AMRFINDERPLUS_UPDATE]=AMRFINDERPLUS_RUN
+)
+manifest_image() {   # manifest_image PROCESS -> image path relative to CONTAINERS, or nothing
+    awk -F'\t' -v p="$1" 'NR > 1 {
+            n = split($5, procs, ",")
+            for (i = 1; i <= n; i++) { k = split(procs[i], parts, ":"); if (parts[k] == p) { print $1; exit } }
+        }' "${CONTAINERS}/MANIFEST.tsv"
+}
 image_for() {
     local process=$1 override="IMG_$1" image
     if [ -n "${!override:-}" ]; then echo "${!override}"; return; fi
     [ -r "${CONTAINERS}/MANIFEST.tsv" ] || fail "no ${CONTAINERS}/MANIFEST.tsv; set CONTAINERS, or use TOOL_MODE=module"
-    image=$(awk -F'\t' -v p="$process" 'NR > 1 {
-                n = split($5, procs, ",")
-                for (i = 1; i <= n; i++) { k = split(procs[i], parts, ":"); if (parts[k] == p) { print $1; exit } }
-            }' "${CONTAINERS}/MANIFEST.tsv")
-    [ -n "$image" ] || fail "no image for process ${process} in ${CONTAINERS}/MANIFEST.tsv"
+    image=$(manifest_image "$process")
+    if [ -z "$image" ] && [ -n "${SAME_IMAGE_AS[$process]:-}" ]; then
+        image=$(manifest_image "${SAME_IMAGE_AS[$process]}")
+    fi
+    [ -n "$image" ] || fail "no image for process ${process} in ${CONTAINERS}/MANIFEST.tsv (set IMG_${process}=/path/image.sif)"
     echo "${CONTAINERS}/${image}"
 }
 
@@ -73,7 +88,7 @@ in_tool_env() {
     local process=$1; shift
     if [ "${TOOL_MODE}" = singularity ]; then
         [ -n "${SINGULARITY_BIN}" ] || fail "singularity/apptainer not found; load its module or use TOOL_MODE=module"
-        local image; image=$(image_for "$process")
+        local image; image=$(image_for "$process") || exit 1
         [ -r "$image" ] || fail "image not found: $image"
         # shellcheck disable=SC2046
         "${SINGULARITY_BIN}" exec $(bind_opts) "$image" "$@"
