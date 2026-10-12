@@ -17,32 +17,37 @@
 
 ## The scenario
 
-> A neonatal surveillance network has sent you **36 bloodstream isolates** from the same hospital, sequenced with
-> Illumina. The paediatric high-dependency unit (**PICU/HDU**) reported a rise in *Klebsiella* infections in
-> **2019**, and the neonatal nursery wants to know whether its lineages from earlier years have come back.
+> A neonatal surveillance network has sent you **five *K. pneumoniae* bloodstream isolates** from the same
+> hospital, collected between **2005 and 2019**, sequenced with Illumina; one also with Nanopore. The neonatal
+> nursery (**Chatinkha**) had a run of *Klebsiella* infections in **2017**, and the hospital wants to know
+> whether isolates from other years and wards are linked to it, and what that means for treatment.
 >
 > The national AMR committee meets this afternoon. It wants answers to four questions.
 
 1. **Is there transmission?** Is there one cluster, several, or only background? In which ward and year?
-2. **Is resistance spreading by clone or by plasmid?** Are any resistance plasmids shared between STs?
+2. **Is resistance spreading by clone or by plasmid?** Do the isolates carry the same resistance plasmids, or different ones?
 3. **Will empiric treatment work?** Which regimens are likely to fail, and how confident are you given the AST?
 4. **What should the unit do next?** Two or three specific actions.
 
 ## Your data
 
-The capstone isolates are new to you. They include more isolates of lineages you have met (ST39, ST35), lineages
-you have not, and some deliberately difficult samples.
+The five capstone isolates are `CHI11E`, `BHB7VE`, `CAA65Z`, `CAA99X` and `D29438`: the pipeline's test set.
+You met them during the week among the 29 training isolates; today you analyse them **end to end**, from raw
+reads to a recommendation, with the pipeline, and bring all the evidence together yourselves. `CHI11E` also has
+Nanopore reads, so it gets a hybrid assembly.
 
 | File | Contents |
 | --- | --- |
-| `$SHARED/capstone/samplesheet.csv` | Sample sheet for the pipeline (`phylo_group` filled for ST14, ST35, ST39; the pipeline groups by Kleborate species + ST unless you add `--phylo_grouping samplesheet`) |
+| `$SHARED/capstone/samplesheet.csv` | Sample sheet for the pipeline (5 isolates; the pipeline groups them by Kleborate species + ST) |
 | `$SHARED/capstone/metadata_capstone.tsv` | Year, ward, neonate, published typing |
 | `$SHARED/capstone/ast_capstone.tsv` | Disc-diffusion AST |
 | `$SHARED/capstone/precomputed/` | Full pipeline results, if your own run does not finish in time |
 
 > [!TIP]
 > Start the pipeline in the first 15 minutes, then work from the pre-computed results while it runs. Spend your
-> time on interpretation, not on waiting.
+> time on interpretation, not on waiting. The hybrid assembly of `CHI11E` takes longest (1–3 hours).
+>
+> With five isolates, every number counts: say how confident you are, and what more sampling would change.
 
 ```bash
 use_tools nextflow
@@ -70,7 +75,7 @@ Everyone checks everyone else's numbers before the presentation.
 - [ ] Species: are all isolates *K. pneumoniae*?
 - [ ] Lineages: ST counts, by ward and year.
 - [ ] Resistance: ESBL, carbapenemase and aminoglycoside genes; agreement with AST.
-- [ ] Plasmids: any clusters shared between STs?
+- [ ] Plasmids: which resistance genes are on plasmids, and are the same plasmids found in several isolates?
 - [ ] Transmission: a tree and SNP distances for each group (e.g. `Kpneumoniae_ST39`); each cluster classified with ward and year.
 - [ ] Antigens: K and O types of any cluster.
 - [ ] Master table: one row per isolate, row count checked.

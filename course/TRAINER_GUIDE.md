@@ -107,7 +107,8 @@ done
 | Set | Isolates | Used for |
 | --- | --- | --- |
 | `compact` | 29 | Days 1–9 |
-| `capstone` | 36 (full minus compact) | Day 10 |
+| 5 test isolates | `CHI11E`, `BHB7VE`, `CAA65Z`, `CAA99X`, `D29438` (from `compact`; the pipeline's test set) | Day 10 capstone |
+| `capstone` | 36 (full minus compact) | Optional: a larger, unseen Day 10 data set |
 | `full` | 65 | Optional larger course, or trainers' reference run |
 
 Download the reads from ENA and write the sample sheets (check with `--dry-run` first):
@@ -119,10 +120,27 @@ python3 neonatal-amr-nf/bin/fetch_ena.py fetch neonatal-amr-nf/training_data/acc
 python3 neonatal-amr-nf/bin/fetch_ena.py fetch neonatal-amr-nf/training_data/accessions_training_compact.tsv \
     -d data -o samplesheet.csv --threads 4
 
+# Day 10 capstone: the 5 test isolates, taken from the training set (no extra download)
+mkdir -p capstone
+TEST="CHI11E BHB7VE CAA65Z CAA99X D29438"
+awk -F',' -v ids="$TEST" 'BEGIN { n = split(ids, a, " "); for (i = 1; i <= n; i++) keep[a[i]] = 1 }
+                          NR == 1 || ($1 in keep)' samplesheet.csv > capstone/samplesheet.csv
+for t in metadata ast; do
+    awk -F'\t' -v ids="$TEST" 'BEGIN { n = split(ids, a, " "); for (i = 1; i <= n; i++) keep[a[i]] = 1 }
+                               NR == 1 || ($1 in keep)' neonatal-amr-nf/training_data/${t}_compact.tsv > capstone/${t}_capstone.tsv
+done
+wc -l capstone/*.csv capstone/*.tsv          # 6 lines each: header + 5 isolates
+```
+
+For a larger, unseen capstone instead (36 isolates, including an ST14 PICU/HDU cluster in 2019), download the
+`capstone` set and use its tables:
+
+```bash
 python3 neonatal-amr-nf/bin/fetch_ena.py fetch neonatal-amr-nf/training_data/accessions_training_capstone.tsv \
     -d capstone/data -o capstone/samplesheet.csv --threads 4
-cp training_data/metadata_capstone.tsv training_data/ast_capstone.tsv capstone/
+cp neonatal-amr-nf/training_data/metadata_capstone.tsv neonatal-amr-nf/training_data/ast_capstone.tsv capstone/
 ```
+Day 10's scenario text describes the 5 test isolates; rewrite it if you use the 36.
 
 Expect about 20–30 GB for the training set. The script checks every file against ENA's MD5 and skips files
 already downloaded, so you can re-run it after an interruption.
@@ -362,7 +380,7 @@ Planning estimates, not measurements: run 3 isolates first and scale from Nextfl
 | Run | 32-core server | 128-core HPC |
 | --- | --- | --- |
 | Training set (29 isolates) | about 4–5 h | about 2.5–3 h |
-| Capstone set (36 isolates) | about 5–6 h | about 3 h |
+| Capstone set (5 test isolates, 1 hybrid) | about 2–3 h (the hybrid assembly sets the pace) | about 1.5–2 h |
 | MOB-suite on 29 Shovill assemblies | under 1 h | under 30 min |
 
 ## 9. Known gaps and decisions for you
