@@ -1,0 +1,30 @@
+sample	collection_year	ward	neonate	training_group	published_species	published_ST	published_K_locus	published_O_type	ena_run	ena_ont_experiment
+1013757	2011	unknown	no	A_hybrid	Klebsiella variicola subsp. variicola	ST3477	-	O2afg	ERR12059200	SRX24314512
+CHI11E	2019	unknown	no	A_hybrid	Klebsiella pneumoniae	ST39	KL62	O1b	ERR12058885	SRX24314513
+CNS1F1	2020	PICU/HDU	yes	A_hybrid	Klebsiella pneumoniae	ST45	KL15 (KL17,KL51,KL52)	O4	ERR12058955	SRX24314514
+CAAGNM	2018	CHATINKHA NURSERY	yes	B_cluster_ST35_2018	Klebsiella pneumoniae	ST35	KL30	O1b	ERR12058305	
+CAAHBT	2018	CHATINKHA NURSERY	yes	B_cluster_ST35_2018	Klebsiella pneumoniae	ST35	KL30	O1b	ERR12058647	
+CAAGJF	2018	CHATINKHA NURSERY	yes	B_cluster_ST35_2018	Klebsiella pneumoniae	ST35	KL30	O1b	ERR12058744	
+CAAGM3	2018	CHATINKHA NURSERY	yes	B_cluster_ST35_2018	Klebsiella pneumoniae	ST35	KL30	O1b	ERR12058768	
+CAAG9G	2018	CHATINKHA NURSERY	yes	B_cluster_ST35_2018	Klebsiella pneumoniae	ST35	KL30	O1b	ERR12058857	
+D46705	2008	unknown	unknown	B_cluster_ST35_2018_background	Klebsiella pneumoniae	ST35	KL108	O1b	ERR12059039	
+CAA65Z	2017	CHATINKHA NURSERY	yes	B_cluster_ST39_2017	Klebsiella pneumoniae	ST39	KL2 (KL30)	O1b	ERR12058332	
+CAA99X	2017	CHATINKHA NURSERY	yes	B_cluster_ST39_2017	Klebsiella pneumoniae	ST39	KL2 (KL30)	O1b	ERR12058223	
+CAA47J	2017	CHATINKHA NURSERY	yes	B_cluster_ST39_2017	Klebsiella pneumoniae	ST39	KL2 (KL30)	O1b	ERR12058628	
+CAA4X5	2017	CHATINKHA NURSERY	yes	B_cluster_ST39_2017	Klebsiella pneumoniae	ST39	KL2 (KL30)	O1b	ERR12058696	
+CAA574	2017	CHATINKHA NURSERY	yes	B_cluster_ST39_2017	Klebsiella pneumoniae	ST39	KL2 (KL30)	O1b	ERR12058752	
+CAA5XX	2017	CHATINKHA NURSERY	no	B_cluster_ST39_2017	Klebsiella pneumoniae	ST39	KL2 (KL30)	O1b	ERR12058758	
+CAA5YM	2017	CHATINKHA NURSERY	yes	B_cluster_ST39_2017	Klebsiella pneumoniae	ST39	KL2 (KL30)	O1b	ERR12058790	
+CAA4GD	2017	CHATINKHA NURSERY	yes	B_cluster_ST39_2017	Klebsiella pneumoniae	ST39	KL2 (KL30)	O1b	ERR12058867	
+D29438	2005	unknown	yes	B_cluster_ST39_2017_background	Klebsiella pneumoniae	ST39	KL51	O1b	ERR12059291	
+BKR8JH	2016	CHATINKHA NURSERY	no	B_cluster_ST39_2017_background	Klebsiella pneumoniae	ST39	KL23	O1b	ERR12059451	
+BHB7VE	2016	4A FEMALE MEDICAL WARD	no	C_carbapenemase	Klebsiella pneumoniae	ST39	KL149	O1b	ERR12058819	
+CES1C7	2019	unknown	no	C_carbapenemase	Klebsiella pneumoniae	ST45	KL15 (KL17,KL51,KL52)	O4	ERR8574872	
+CAAWBC	2019	PAEDIATRIC SURGICAL WARD	no	D_diversity	Klebsiella pneumoniae	ST15	KL48	O1b	ERR12059414	
+CAASX8	2019	CHATINKHA NURSERY	yes	D_diversity	Klebsiella pneumoniae	ST17	KL25	O5	ERR12059316	
+CLL32W	2020	3B MALE MEDICAL WARD	no	D_diversity	Klebsiella pneumoniae	ST307	KL102 (KL149,KL155)	O2afg	ERR12058927	
+CAAUM3	2019	PAEDIATRIC SURGICAL WARD	unknown	E_virulence	Klebsiella pneumoniae	ST1049	KL5	O1b	ERR12059342	
+CAAQN6	2019	PICU/HDU	no	F_species	Klebsiella quasipneumoniae subsp. similipneumoniae	ST334	KL103	O5	ERR12058838	
+CAAYXM	2020	PAEDIATRIC NURSERY	no	F_species	Klebsiella variicola subsp. variicola	ST1469	KL55	unknown (OL103)	ERR12058924	
+D38119	2006	unknown	no	G_qc_fail	Klebsiella pneumoniae	ST14	KL2 (KL30)	O1b	ERR12059112	
+CES13U	2018	unknown	no	G_qc_fail	Klebsiella pneumoniae	ST256	KL47	unknown	ERR8574843	

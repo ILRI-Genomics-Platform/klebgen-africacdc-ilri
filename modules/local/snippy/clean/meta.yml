@@ -1,0 +1,65 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/nf-core/modules/master/modules/meta-schema.json
+name: snippy_clean
+description: Clean a snippy-core full alignment (non-ACGT characters to N) for Gubbins, naming the output after
+  the phylogeny group
+keywords:
+  - alignment
+  - snippy
+  - gubbins
+  - phylogenetics
+tools:
+  - snippy:
+      description: Rapid haploid variant calling and core genome alignment
+      homepage: https://github.com/tseemann/snippy
+      documentation: https://github.com/tseemann/snippy
+      tool_dev_url: https://github.com/tseemann/snippy
+      licence:
+        - GPL-2.0-only
+input:
+  - - meta:
+        type: map
+        description: |
+          Groovy Map containing sample information
+          e.g. [ id:'sample1', species:'kpneumoniae' ]
+    - full_aln:
+        type: file
+        description: snippy-core full alignment
+        pattern: '*.full.aln'
+        ontologies: []
+output:
+  aln:
+    - - meta:
+          type: map
+          description: |
+            Groovy Map containing sample information
+            e.g. [ id:'sample1', species:'kpneumoniae' ]
+      - ${prefix}.aln:
+          type: file
+          description: Cleaned full alignment
+          pattern: ${prefix}.aln
+          ontologies: []
+  versions_snippy:
+    - - ${task.process}:
+          type: string
+          description: The name of the process
+      - snippy:
+          type: string
+          description: The name of the tool
+      - snippy --version 2>&1 | sed 's/snippy //':
+          type: eval
+          description: The expression to obtain the version of the tool
+topics:
+  versions:
+    - - ${task.process}:
+          type: string
+          description: The name of the process
+      - snippy:
+          type: string
+          description: The name of the tool
+      - snippy --version 2>&1 | sed 's/snippy //':
+          type: eval
+          description: The expression to obtain the version of the tool
+authors:
+  - '@neonatal-amr-training'
+maintainers:
+  - '@neonatal-amr-training'

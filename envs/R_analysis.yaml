@@ -1,0 +1,25 @@
+# Per-user R for the course's R scripts (bin/*.R), independent of the HPC's R module.
+# Everything is a ready-built conda package (no compiling); BactDating, which is only on GitHub, is added by
+# bin/install_r_packages.R into this R's own user library.
+#
+#   mamba env create -f envs/r-analysis.yml          # once per user (conda env create ... also works)
+#   conda activate r-analysis
+#   R_MODULE=none bin/run_R.sh install_r_packages.R   # adds BactDating
+#   R_MODULE=none bin/run_R.sh make_figures.R --results ... --metadata ...
+name: r-analysis
+channels:
+  - conda-forge
+  - bioconda
+dependencies:
+  - r-base=4.4
+  - r-ggplot2
+  - r-ape
+  - r-coda
+  - r-ggnewscale
+  - r-ggalluvial
+  - r-remotes
+  - r-rcpp
+  - bioconductor-ggtree
+  - bioconductor-complexheatmap
+  - compilers          # to build BactDating (C++) from GitHub
+  - make

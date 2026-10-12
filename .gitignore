@@ -1,0 +1,6 @@
+.DS_Store
+*.fastq.gz
+*.fq.gz
+*.bam
+work/
+.nextflow*

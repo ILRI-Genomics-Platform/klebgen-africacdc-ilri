@@ -1,0 +1,6 @@
+sample,species,fasta,phylo_group
+ASM01,K. pneumoniae,assemblies/ASM01_contigs.fasta,ST39
+ASM02,Klebsiella pneumoniae,assemblies/ASM02_contigs.fasta,ST39
+ASM03,kpneumoniae,assemblies/ASM03_contigs.fasta,ST39
+ASM04,kpneumoniae,assemblies/ASM04_contigs.fasta,
+ECA01,E. coli,assemblies/ECA01_contigs.fasta,

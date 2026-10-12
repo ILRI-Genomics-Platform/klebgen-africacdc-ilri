@@ -1,0 +1,6 @@
+sample,species,fastq_1,fastq_2,long_fastq,phylo_group
+CHI11E,kpneumoniae,/home/jjuma/trainings/klebgen-africacdc-ilri/neonatal-amr-nf/raw_data/raw/ERR12058885_1.fastq.gz,/home/jjuma/trainings/klebgen-africacdc-ilri/neonatal-amr-nf/raw_data/raw/ERR12058885_2.fastq.gz,/home/jjuma/trainings/klebgen-africacdc-ilri/neonatal-amr-nf/raw_data/raw/SRR28748993_1.fastq.gz,ST39
+BHB7VE,kpneumoniae,/home/jjuma/trainings/klebgen-africacdc-ilri/neonatal-amr-nf/raw_data/raw/ERR12058819_1.fastq.gz,/home/jjuma/trainings/klebgen-africacdc-ilri/neonatal-amr-nf/raw_data/raw/ERR12058819_2.fastq.gz,,ST39
+CAA65Z,kpneumoniae,/home/jjuma/trainings/klebgen-africacdc-ilri/neonatal-amr-nf/raw_data/raw/ERR12058332_1.fastq.gz,/home/jjuma/trainings/klebgen-africacdc-ilri/neonatal-amr-nf/raw_data/raw/ERR12058332_2.fastq.gz,,ST39
+CAA99X,kpneumoniae,/home/jjuma/trainings/klebgen-africacdc-ilri/neonatal-amr-nf/raw_data/raw/ERR12058223_1.fastq.gz,/home/jjuma/trainings/klebgen-africacdc-ilri/neonatal-amr-nf/raw_data/raw/ERR12058223_2.fastq.gz,,ST39
+D29438,kpneumoniae,/home/jjuma/trainings/klebgen-africacdc-ilri/neonatal-amr-nf/raw_data/raw/ERR12059291_1.fastq.gz,/home/jjuma/trainings/klebgen-africacdc-ilri/neonatal-amr-nf/raw_data/raw/ERR12059291_2.fastq.gz,,ST39

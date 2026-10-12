@@ -1,0 +1,79 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/nf-core/modules/master/modules/meta-schema.json
+name: kleborate
+description: 'Screen Klebsiella pneumoniae species complex assemblies (and E. coli for MLST) with Kleborate v3:
+  species, MLST, AMR, virulence loci and K/O antigen loci via Kaptive'
+keywords:
+  - klebsiella
+  - escherichia
+  - mlst
+  - amr
+  - virulence
+  - serotype
+tools:
+  - kleborate:
+      description: Genotyping tool for Klebsiella pneumoniae species complex genomes
+      homepage: https://github.com/klebgenomics/Kleborate
+      documentation: https://github.com/klebgenomics/Kleborate
+      tool_dev_url: https://github.com/klebgenomics/Kleborate
+      licence:
+        - GPL-3.0-or-later
+input:
+  - - meta:
+        type: map
+        description: |
+          Groovy Map containing sample information
+          e.g. [ id:'sample1', species:'kpneumoniae' ]
+    - fasta:
+        type: file
+        description: 'Genome assembly in FASTA format. meta.species selects the preset (kpneumoniae: kpsc; ecoli:
+          escherichia)'
+        pattern: '*.{fasta,fa,fna,fasta.gz,fa.gz}'
+        ontologies: []
+output:
+  txt:
+    - - meta:
+          type: map
+          description: |
+            Groovy Map containing sample information
+            e.g. [ id:'sample1', species:'kpneumoniae' ]
+      - ${prefix}.kleborate.txt:
+          type: file
+          description: Kleborate results table, one row per assembly
+          pattern: ${prefix}.kleborate.txt
+          ontologies: []
+  hamronization:
+    - - meta:
+          type: map
+          description: |
+            Groovy Map containing sample information
+            e.g. [ id:'sample1', species:'kpneumoniae' ]
+      - ${prefix}.kleborate_hamronization.txt:
+          type: file
+          description: AMR results in hAMRonization format (K. pneumoniae species complex only)
+          pattern: ${prefix}.kleborate_hamronization.txt
+          ontologies: []
+  versions_kleborate:
+    - - ${task.process}:
+          type: string
+          description: The name of the process
+      - kleborate:
+          type: string
+          description: The name of the tool
+      - kleborate --version 2>&1 | sed 's/^.*Kleborate v//; s/ .*//':
+          type: eval
+          description: The expression to obtain the version of the tool
+topics:
+  versions:
+    - - ${task.process}:
+          type: string
+          description: The name of the process
+      - kleborate:
+          type: string
+          description: The name of the tool
+      - kleborate --version 2>&1 | sed 's/^.*Kleborate v//; s/ .*//':
+          type: eval
+          description: The expression to obtain the version of the tool
+authors:
+  - '@neonatal-amr-training'
+maintainers:
+  - '@neonatal-amr-training'

@@ -1,0 +1,74 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/nf-core/modules/master/modules/meta-schema.json
+name: ezclermont
+description: Assign Escherichia coli Clermont phylogroups in silico with EzClermont
+keywords:
+  - escherichia coli
+  - phylogroup
+  - typing
+tools:
+  - ezclermont:
+      description: In silico Clermont phylotyping for Escherichia coli
+      homepage: https://github.com/nickp60/EzClermont
+      documentation: https://github.com/nickp60/EzClermont
+      tool_dev_url: https://github.com/nickp60/EzClermont
+      licence:
+        - MIT
+input:
+  - - meta:
+        type: map
+        description: |
+          Groovy Map containing sample information
+          e.g. [ id:'sample1', species:'kpneumoniae' ]
+    - fasta:
+        type: file
+        description: E. coli genome assembly in FASTA format
+        pattern: '*.{fasta,fa,fna}'
+        ontologies: []
+output:
+  tsv:
+    - - meta:
+          type: map
+          description: |
+            Groovy Map containing sample information
+            e.g. [ id:'sample1', species:'kpneumoniae' ]
+      - ${prefix}.ezclermont.tsv:
+          type: file
+          description: Sample name and assigned phylogroup
+          pattern: ${prefix}.ezclermont.tsv
+          ontologies: []
+  log:
+    - - meta:
+          type: map
+          description: |
+            Groovy Map containing sample information
+            e.g. [ id:'sample1', species:'kpneumoniae' ]
+      - ${prefix}.ezclermont.log:
+          type: file
+          description: EzClermont log with primer hits
+          pattern: ${prefix}.ezclermont.log
+          ontologies: []
+  versions_ezclermont:
+    - - ${task.process}:
+          type: string
+          description: The name of the process
+      - ezclermont:
+          type: string
+          description: The name of the tool
+      - python -c 'import importlib.metadata as m; print(m.version("ezclermont"))':
+          type: eval
+          description: The expression to obtain the version of the tool
+topics:
+  versions:
+    - - ${task.process}:
+          type: string
+          description: The name of the process
+      - ezclermont:
+          type: string
+          description: The name of the tool
+      - python -c 'import importlib.metadata as m; print(m.version("ezclermont"))':
+          type: eval
+          description: The expression to obtain the version of the tool
+authors:
+  - '@neonatal-amr-training'
+maintainers:
+  - '@neonatal-amr-training'

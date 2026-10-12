@@ -1,0 +1,82 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/nf-core/modules/master/modules/meta-schema.json
+name: kaptive
+description: 'Capsule (K) and LPS (O) locus typing of Klebsiella pneumoniae species complex assemblies with Kaptive 3:
+  full gene-level report and locus sequences (Kleborate reports only the summary)'
+keywords:
+  - klebsiella
+  - capsule
+  - serotype
+  - k-locus
+  - o-locus
+tools:
+  - kaptive:
+      description: Surface polysaccharide locus typing for Klebsiella and Acinetobacter genomes
+      homepage: https://kaptive.readthedocs.io
+      documentation: https://kaptive.readthedocs.io
+      tool_dev_url: https://github.com/klebgenomics/Kaptive
+      licence:
+        - GPL-3.0-or-later
+input:
+  - - meta:
+        type: map
+        description: |
+          Groovy Map containing sample information
+          e.g. [ id:'sample1', species:'kpneumoniae' ]
+    - fasta:
+        type: file
+        description: Genome assembly in FASTA format (K. pneumoniae species complex)
+        pattern: '*.{fasta,fa,fna}'
+        ontologies: []
+output:
+  k_locus:
+    - - meta:
+          type: map
+          description: Groovy Map containing sample information
+      - ${prefix}.kaptive_K.tsv:
+          type: file
+          description: Kaptive report for the capsule (K) locus, database kpsc_k
+          pattern: '*.kaptive_K.tsv'
+          ontologies: []
+  o_locus:
+    - - meta:
+          type: map
+          description: Groovy Map containing sample information
+      - ${prefix}.kaptive_O.tsv:
+          type: file
+          description: Kaptive report for the LPS (O) locus, database kpsc_o
+          pattern: '*.kaptive_O.tsv'
+          ontologies: []
+  loci:
+    - - meta:
+          type: map
+          description: Groovy Map containing sample information
+      - ${prefix}_{K,O}_locus/*:
+          type: file
+          description: Nucleotide sequences of the K and O loci found in the assembly
+          pattern: '*_{K,O}_locus/*'
+          ontologies: []
+  versions_kaptive:
+    - - ${task.process}:
+          type: string
+          description: The name of the process
+      - kaptive:
+          type: string
+          description: The name of the tool
+      - kaptive --version 2>&1 | sed 's/^[^0-9]*//':
+          type: eval
+          description: The expression to obtain the version of the tool
+topics:
+  versions:
+    - - ${task.process}:
+          type: string
+          description: The name of the process
+      - kaptive:
+          type: string
+          description: The name of the tool
+      - kaptive --version 2>&1 | sed 's/^[^0-9]*//':
+          type: eval
+          description: The expression to obtain the version of the tool
+authors:
+  - '@neonatal-amr-training'
+maintainers:
+  - '@neonatal-amr-training'

@@ -1,0 +1,9 @@
+sample,species,fastq_1,fastq_2,long_fastq,phylo_group
+KP01,kpneumoniae,KP01_R1.fastq.gz,KP01_R2.fastq.gz,KP01_ont.fastq.gz,ST39
+KP02,kpneumoniae,KP02_R1.fastq.gz,KP02_R2.fastq.gz,,ST39
+KP03,kpneumoniae,KP03_R1.fastq.gz,KP03_R2.fastq.gz,,ST39
+KP04,kpneumoniae,KP04_R1.fastq.gz,KP04_R2.fastq.gz,,ST39
+KP05,kpneumoniae,KP05_R1.fastq.gz,KP05_R2.fastq.gz,,
+KP06,kpneumoniae,KP06_R1.fastq.gz,KP06_R2.fastq.gz,,ST35
+KP07,kpneumoniae,KP07_R1.fastq.gz,KP07_R2.fastq.gz,,ST35
+EC01,ecoli,EC01_R1.fastq.gz,EC01_R2.fastq.gz,EC01_ont.fastq.gz,

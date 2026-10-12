@@ -1,0 +1,8 @@
+id	species	accession
+# Replace the rows below with isolates chosen from the source papers' supplementary tables
+# or from: python3 bin/fetch_ena.py list PRJEB42462 -o PRJEB42462_runs.tsv
+# Lines starting with '#' are ignored. Replace every <placeholder> with a real ENA accession.
+MW_ST39_HY01	kpneumoniae	<ILLUMINA_RUN>;<ONT_RUN>
+MW_ST39_01	kpneumoniae	<SAMPLE_OR_RUN_ACCESSION>
+MW_ST14_01	kpneumoniae	<SAMPLE_OR_RUN_ACCESSION>
+EC_01	ecoli	<SAMPLE_OR_RUN_ACCESSION>

@@ -1,0 +1,18 @@
+# Reference genomes for the phylogeny step (Module 6), used with --phylo_grouping kleborate (the default).
+#
+# Each isolate is put in a group by the species and ST that Kleborate reports, e.g. Kpneumoniae_ST39, and
+# Snippy maps the group's reads to the reference chosen here:
+#   - species: matched against the start of Kleborate's species name, so 'Klebsiella pneumoniae' also
+#     matches 'Klebsiella pneumoniae subsp. pneumoniae'. The first matching row wins.
+#   - st: leave empty for a species-wide reference. A row with an ST (e.g. ST39) is used for that ST
+#     instead of the species-wide row, wherever it appears in this file.
+#   - accession: an NCBI nucleotide accession. bin/fetch_references.py downloads it once as
+#     <accession>.fasta into --phylo_reference_dir; the pipeline only reads it.
+# Species with no row here are left out of the phylogeny (with a warning).
+species,st,name,accession
+Klebsiella pneumoniae,,NTUH-K2044,AP006725.1
+Klebsiella quasipneumoniae,,ATCC_700603,CP029597.1
+Klebsiella variicola,,ATCC_700603,CP029597.1
+Escherichia coli,,K-12_MG1655,U00096.3
+# Example of an ST-specific reference (replace the accession with a closed genome of that ST):
+# Klebsiella pneumoniae,ST39,my_ST39_reference,XXXXXXXX.1

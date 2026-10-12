@@ -1,0 +1,5 @@
+sample,species,fastq_1,fastq_2,long_fastq,phylo_group
+CHI11E,kpneumoniae,data/raw/ERR12058885_1.fastq.gz,data/raw/ERR12058885_2.fastq.gz,data/CHI11E_ont.fastq.gz,ST39
+CAA65Z,kpneumoniae,data/raw/ERR12058332_1.fastq.gz,data/raw/ERR12058332_2.fastq.gz,,ST39
+CAAWBC,kpneumoniae,data/raw/ERR12059414_1.fastq.gz,data/raw/ERR12059414_2.fastq.gz,,
+EC_EXAMPLE,ecoli,data/EC_EXAMPLE_R1.fastq.gz,data/EC_EXAMPLE_R2.fastq.gz,,

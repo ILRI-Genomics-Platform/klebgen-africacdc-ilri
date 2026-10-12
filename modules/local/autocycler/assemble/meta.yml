@@ -1,0 +1,129 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/nf-core/modules/master/modules/meta-schema.json
+name: autocycler_assemble
+description: Consensus long-read bacterial genome assembly with Autocycler, building input assemblies with Flye
+  and Raven on read subsets
+keywords:
+  - assembly
+  - long reads
+  - nanopore
+  - consensus
+  - bacteria
+tools:
+  - autocycler:
+      description: Consensus long-read assembly for bacterial genomes
+      homepage: https://github.com/rrwick/Autocycler
+      documentation: https://github.com/rrwick/Autocycler
+      tool_dev_url: https://github.com/rrwick/Autocycler
+      licence:
+        - GPL-3.0-or-later
+  - flye:
+      description: De novo assembler for long reads
+      homepage: https://github.com/mikolmogorov/Flye
+      documentation: https://github.com/mikolmogorov/Flye
+      tool_dev_url: https://github.com/mikolmogorov/Flye
+      licence:
+        - BSD-3-Clause
+  - raven:
+      description: De novo long-read assembler
+      homepage: https://github.com/lbcb-sci/raven
+      documentation: https://github.com/lbcb-sci/raven
+      tool_dev_url: https://github.com/lbcb-sci/raven
+      licence:
+        - MIT
+input:
+  - - meta:
+        type: map
+        description: |
+          Groovy Map containing sample information
+          e.g. [ id:'sample1', species:'kpneumoniae' ]
+    - longreads:
+        type: file
+        description: Filtered Oxford Nanopore reads
+        pattern: '*.{fastq,fastq.gz,fq,fq.gz}'
+        ontologies: []
+output:
+  fasta:
+    - - meta:
+          type: map
+          description: |
+            Groovy Map containing sample information
+            e.g. [ id:'sample1', species:'kpneumoniae' ]
+      - ${prefix}.autocycler.fasta:
+          type: file
+          description: Consensus assembly
+          pattern: ${prefix}.autocycler.fasta
+          ontologies: []
+  gfa:
+    - - meta:
+          type: map
+          description: |
+            Groovy Map containing sample information
+            e.g. [ id:'sample1', species:'kpneumoniae' ]
+      - ${prefix}.autocycler.gfa:
+          type: file
+          description: Consensus assembly graph
+          pattern: ${prefix}.autocycler.gfa
+          ontologies: []
+  versions_autocycler:
+    - - ${task.process}:
+          type: string
+          description: The name of the process
+      - autocycler:
+          type: string
+          description: The name of the tool
+      - autocycler --version 2>&1 | sed 's/^[^ ]* //':
+          type: eval
+          description: The expression to obtain the version of the tool
+  versions_flye:
+    - - ${task.process}:
+          type: string
+          description: The name of the process
+      - flye:
+          type: string
+          description: The name of the tool
+      - flye --version 2>&1:
+          type: eval
+          description: The expression to obtain the version of the tool
+  versions_raven:
+    - - ${task.process}:
+          type: string
+          description: The name of the process
+      - raven:
+          type: string
+          description: The name of the tool
+      - raven --version 2>&1:
+          type: eval
+          description: The expression to obtain the version of the tool
+topics:
+  versions:
+    - - ${task.process}:
+          type: string
+          description: The name of the process
+      - autocycler:
+          type: string
+          description: The name of the tool
+      - autocycler --version 2>&1 | sed 's/^[^ ]* //':
+          type: eval
+          description: The expression to obtain the version of the tool
+    - - ${task.process}:
+          type: string
+          description: The name of the process
+      - flye:
+          type: string
+          description: The name of the tool
+      - flye --version 2>&1:
+          type: eval
+          description: The expression to obtain the version of the tool
+    - - ${task.process}:
+          type: string
+          description: The name of the process
+      - raven:
+          type: string
+          description: The name of the tool
+      - raven --version 2>&1:
+          type: eval
+          description: The expression to obtain the version of the tool
+authors:
+  - '@neonatal-amr-training'
+maintainers:
+  - '@neonatal-amr-training'
