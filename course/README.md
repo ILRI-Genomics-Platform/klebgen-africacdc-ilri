@@ -189,7 +189,7 @@ testing helps.
 ## Getting help
 
 1. Read the error message: the last few lines usually say what went wrong.
-2. Check that you activated the right software environment (`conda activate ...`).
+2. Check that you switched on the right tools (`use_tools ...`; `list_tools` shows every tool).
 3. Check that the input file exists: `ls -lh <file>`.
 4. Ask your neighbour, then a trainer.
 

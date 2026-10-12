@@ -13,7 +13,7 @@ server before participants arrive.
 3. [The shared folder](#3-the-shared-folder)
 4. [Training data](#4-training-data)
 5. [Databases](#5-databases)
-6. [Software environments](#6-software-environments)
+6. [Software for the hands-on sessions](#6-software-for-the-hands-on-sessions)
 7. [Pipeline containers: shared, read-only Singularity images](#7-pipeline-containers-shared-read-only-singularity-images)
    (7.4: phylogeny reference genomes)
 8. [Pre-computed results](#8-pre-computed-results)
@@ -25,13 +25,13 @@ server before participants arrive.
 
 | When | Task |
 | --- | --- |
-| 3 weeks before | Server accounts and a course Unix group; create `$SHARED`; build environments (section 6) |
+| 3 weeks before | Server accounts and a course Unix group; create `$SHARED`; set up the software (section 6) |
 | 3 weeks before | Prepare and lock the pipeline's Singularity images (section 7) |
 | 3 weeks before | Download data (section 4) and databases (section 5) |
 | 2 weeks before | Run the pipeline on the training and capstone sets (section 8) |
 | 2 weeks before | Pre-compute the manual steps (section 8) |
 | 1 week before | Dry run: one trainer works through every page, Day 1 to Day 10, on a participant account |
-| 1 day before | Check every participant can log in and run `conda activate qc && fastp --version` |
+| 1 day before | Check every participant can log in and run `use_tools qc && fastp --version`, and has installed their R packages |
 | 1 day before | As a participant: `bin/prepare_shared_containers.sh --check` shows all images present |
 
 ## 2. Hardware
@@ -52,7 +52,7 @@ Create a read-only folder and set `SHARED` to it in the Day 1 setup block:
 ```text
 $SHARED/                                   e.g. /var/scratch/global/jjuma/neonatal-amr/shared
 ├── neonatal-amr-nf/                       the pipeline (this repository)
-├── containers/                            read-only Singularity images for the pipeline (section 7)
+├── containers/                            read-only Singularity images: pipeline (section 7) and course tools (section 6)
 │   ├── nf-core/                           images for the nf-core modules
 │   ├── local/                             images built for the course's local modules
 │   └── MANIFEST.tsv                       source, size and checksum of every image
@@ -144,35 +144,56 @@ already downloaded, so you can re-run it after an interruption.
 > Record each database's version or download date and give it to participants. AMRFinderPlus results in
 > particular change between database releases.
 
-## 6. Software environments
+## 6. Software for the hands-on sessions
 
-One conda environment per tool group. Versions match the pipeline's modules where the pipeline uses the tool;
-for the rest, pin the current Bioconda release when you build, and write it down.
+Participants install nothing. In the hands-on sessions every tool runs from a **Singularity image** in the
+shared, read-only image folder (`$SHARED/containers`): the same images the pipeline uses (section 7), so
+manual results and pipeline results come from the same versions. `course/tools.sh` does this for them. Day 1
+adds it to every participant's `~/.bashrc`, and each session switches a group of tools on with
+`use_tools <group>` (in place of `conda activate`):
 
-| Environment | Packages (Bioconda unless noted) |
-| --- | --- |
-| `qc` | seqkit, fastqc, fastp=1.3.6, nanoplot=1.47.0, filtlong=0.2.1, kraken2=2.1.6, bracken=3.1, multiqc=1.35 |
-| `assembly` | shovill=1.1.0, autocycler=0.6.2, flye=2.9.5, raven-assembler=1.6.1, polypolish=0.6.0, pypolca=0.4.0, bwa=0.7.19, quast=5.3.0, checkm2, bandage, seqkit |
-| `medaka` | medaka=2.2.2 |
-| `typing` | kleborate=3.2.4 (installs Kaptive), mlst, ectyper=1.0.0, ezclermont=1.0.0 |
-| `amr` | ncbi-amrfinderplus=4.2.7, abricate |
-| `plasmids` | mob_suite=3.1.9, mash, bakta |
-| `phylo` | snippy=4.6.0, gubbins=3.3.5, snp-sites=2.5.1, snp-dists=0.8.2, iqtree=3.1.3, seqkit |
-| `r-env` | conda-forge: r-base, r-tidyverse, r-ape, r-coda, r-remotes; Bioconductor: bioconductor-ggtree; then BactDating from GitHub (below) |
-| `nextflow` | nextflow (25.04 or later) |
+| Group | Tools | Image |
+| --- | --- | --- |
+| `qc` | seqkit, FastQC, fastp, NanoPlot, Filtlong, Kraken2, Bracken, MultiQC | pipeline images; seqkit and FastQC: course images |
+| `assembly` | Shovill, Autocycler (with Flye, Raven), BWA, Polypolish, Pypolca, QUAST, CheckM2, Bandage | pipeline images; CheckM2, Bandage: course images |
+| `medaka` | Medaka | pipeline image |
+| `typing` | Kleborate (with Kaptive), ECTyper, EzClermont | pipeline images |
+| `amr` | AMRFinderPlus | pipeline image |
+| `plasmids` | MOB-suite (with Mash), Bakta | pipeline image; Bakta: course image |
+| `phylo` | Snippy (with snp-sites), Gubbins, snp-dists, IQ-TREE, seqkit | pipeline images; seqkit: course image |
+| `r` | R | module `R/4.5`; packages in each participant's own library |
+| `nextflow` | Nextflow | module `nextflow/25.04` |
+
+**Course-only images.** Five tools are used in the sessions but not by the pipeline: seqkit 2.8.2, FastQC
+0.12.1, CheckM2 1.0.2, Bandage 0.8.1 and Bakta 1.9.4 (`course/envs/<tool>/environment.yml`).
+`bin/prepare_shared_containers.sh` (section 7) builds them into `$SHARED/containers/course/` with the pipeline's
+images, and lists them in `MANIFEST.tsv`, where `use_tools` finds them. Check that everything is in place:
 
 ```bash
-mamba create -y -n qc -c conda-forge -c bioconda seqkit fastqc fastp=1.3.6 nanoplot=1.47.0 \
-    filtlong=0.2.1 kraken2=2.1.6 bracken=3.1 multiqc=1.35
-# ...repeat for each environment in the table...
-
-conda activate r-env
-Rscript -e 'remotes::install_github("xavierdidelot/BactDating")'
+bin/prepare_shared_containers.sh --check          # every image, pipeline and course: present / MISSING
+source course/tools.sh && list_tools              # as a participant: every tool and its image
 ```
 
-> [!WARNING]
-> These environments have not been solved together on every platform. If an environment will not solve, split it
-> (for example, CheckM2 and Bakta into their own environments) and update the Day 1 table for participants.
+Keep the CheckM2 and Bakta databases in step with these versions: CheckM2 1.0.2 reads
+`uniref100.KO.1.dmnd`; Bakta 1.9.4 needs a database of version 5.x (`db-light` is enough).
+
+**Modules instead of images.** If your HPC provides the tools as modules, participants set
+`export TOOL_MODE=module` in `~/.bashrc` (Day 1, section 0.1) and `use_tools <group>` runs `module load` for
+the group. Set the module names for your HPC in `GROUP_MODULES` at the top of `course/tools.sh`, keeping the
+versions in the table above.
+
+**R.** `use_tools r` loads the R module (`R_MODULE`, default `R/4.5`). Each participant installs the R
+packages once into their own library (`~/R/<platform>-library/4.5`) on Day 1, on the login node (it needs
+internet; 20–40 minutes):
+
+```bash
+$SHARED/neonatal-amr-nf/bin/run_R.sh install_r_packages.R     # tidyverse, ape, ggtree, BactDating, ...
+```
+
+Other settings, all at the top of `course/tools.sh` (or set in `~/.bashrc` before it is loaded):
+`CONTAINERS` (image folder, default `$SHARED/containers`), `TOOL_BINDS` (folders the images must see,
+default `/var/scratch,/export/data,$HOME`), `NEXTFLOW_MODULE`, and `SINGULARITY_MODULE` if `singularity` is
+not on the default `PATH`.
 
 ## 7. Pipeline containers: shared, read-only Singularity images
 
@@ -193,6 +214,7 @@ to `conf/slurm.config`).
 | --- | --- | --- |
 | `containers/nf-core/` | 17, for the 20 nf-core module processes | Downloaded from the nf-core / BioContainers and Seqera image stores, named as Nextflow expects |
 | `containers/local/` | 4: Kleborate 3.2.4; Autocycler + Flye + Raven; Polypolish + BWA; EzClermont | Built from each local module's `environment.yml` |
+| `containers/course/` | 5: seqkit, FastQC, CheckM2, Bandage, Bakta | Hands-on sessions only (section 6); built from `course/envs/<tool>/environment.yml` |
 
 ### 7.1 Prepare the images (once, as the trainer who will own them)
 
@@ -326,7 +348,7 @@ done
 mkdir -p $P/02_assembly/hybrid && cp $R/hybrid/*.hybrid.fasta $P/02_assembly/hybrid/
 
 # MOB-suite on every Shovill assembly (the pipeline runs it on the best assembly instead)
-conda activate plasmids
+source $SHARED/neonatal-amr-nf/course/tools.sh && use_tools plasmids
 for d in $P/02_assembly/shovill/*/; do
     s=$(basename $d)
     mob_recon --infile $d/contigs.fa --outdir $P/05_plasmids/shortread/$s -n 8

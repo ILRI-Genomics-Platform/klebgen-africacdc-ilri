@@ -1,0 +1,8 @@
+---
+# Course-only tool (not used by the pipeline): built into <shared containers>/course/bakta.sif
+# by bin/prepare_shared_containers.sh
+channels:
+  - conda-forge
+  - bioconda
+dependencies:
+  - bioconda::bakta=1.9.4

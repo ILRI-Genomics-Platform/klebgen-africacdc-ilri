@@ -17,7 +17,8 @@ dir.create(lib, recursive = TRUE, showWarnings = FALSE)
 .libPaths(lib)            # only this library and R's built-in packages
 
 packages <- list(
-    cran   = c("ggplot2", "ape", "coda", "ggnewscale", "ggalluvial"),
+    cran   = c("ggplot2", "ape", "coda", "ggnewscale", "ggalluvial",
+               "tidyverse"),     # tidyverse (readr, dplyr, tidyr, ...): the course's R sessions (Days 4, 7-9)
     bioc   = c("ggtree", "ComplexHeatmap"),
     github = c(BactDating = "xavierdidelot/BactDating")
 )

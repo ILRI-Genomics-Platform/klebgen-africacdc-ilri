@@ -41,7 +41,7 @@ Expected genome size: *K. pneumoniae* about **5.2–5.8 Mb** (GC about 57%); *E.
 ### 2.2 Short-read assembly with Shovill
 
 ```bash
-conda activate assembly
+use_tools assembly
 mkdir -p $RESULTS/02_assembly/shovill
 
 # One sample first (allow roughly 15-30 minutes with 4 threads). CHI11E is also one of the hybrid
@@ -89,6 +89,7 @@ Autocycler builds several assemblies from subsets of the reads, with different a
 This removes errors that only one assembler makes.
 
 ```bash
+use_tools assembly          # Autocycler runs Flye and Raven from inside its own image
 s=CHI11E
 mkdir -p $RESULTS/02_assembly/autocycler/$s && cd $RESULTS/02_assembly/autocycler/$s
 reads=$COURSE/trimmed/${s}_ont.fastq.gz
@@ -131,11 +132,11 @@ out=$RESULTS/02_assembly/hybrid/$s
 mkdir -p $out
 
 # 1. Long-read polishing
-conda activate medaka
+use_tools medaka
 medaka_consensus -i $COURSE/trimmed/${s}_ont.fastq.gz -d $draft -o $out/medaka -t $THREADS
 
 # 2. Short-read polishing: align each read file separately, keep all alignments (-a)
-conda activate assembly
+use_tools assembly
 cp $out/medaka/consensus.fasta $out/medaka.fasta
 bwa index $out/medaka.fasta
 bwa mem -t $THREADS -a $out/medaka.fasta $COURSE/trimmed/${s}_R1.fastq.gz > $out/aln_1.sam
@@ -165,8 +166,9 @@ quast.py $COURSE/assemblies/${s}.fasta \
 cat $RESULTS/02_assembly/quast_compare_$s/report.txt
 ```
 
-Now look at the assembly graphs in **Bandage**. If Bandage is not installed on the server, draw an image and copy
-it to your computer:
+Now look at the assembly graphs in **Bandage**. The server has no screen, so Bandage draws each graph as an
+image; copy the PNG files to your computer to look at them (or open the `.gfa` files in Bandage on your own
+computer):
 
 ```bash
 Bandage image $RESULTS/02_assembly/shovill/$s/contigs.gfa $RESULTS/02_assembly/${s}_shovill.png

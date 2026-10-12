@@ -83,7 +83,7 @@ First check whether there is enough **temporal signal**: do isolates collected l
 mutations from the root?
 
 ```bash
-conda activate r-env
+use_tools r
 cd $RESULTS/06_phylogeny/ST39
 R
 ```

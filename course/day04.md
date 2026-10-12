@@ -33,7 +33,7 @@ By the end of today you can:
 The study tested isolates by disc diffusion. Your AST table is `training_data/ast_compact.tsv` (S, I, R or NA).
 
 ```bash
-conda activate r-env
+use_tools r
 cd $COURSE
 R
 ```
@@ -181,7 +181,7 @@ IncX3 with *bla*NDM-5.
 ### 5.2 MOB-suite: hybrid versus short-read
 
 ```bash
-conda activate plasmids
+use_tools plasmids
 mkdir -p $RESULTS/05_plasmids
 
 for s in CHI11E CNS1F1 1013757; do
@@ -224,7 +224,7 @@ contigs from two plasmids, or miss contigs, when they share repeats.
 ### 5.3 Which plasmid carries which gene?
 
 ```bash
-conda activate amr
+use_tools amr
 AMRDB=$SHARED/databases/amrfinderplus/latest
 for s in CHI11E CNS1F1 1013757; do
     for p in $RESULTS/05_plasmids/hybrid/$s/plasmid_*.fasta $RESULTS/05_plasmids/hybrid/$s/chromosome.fasta; do

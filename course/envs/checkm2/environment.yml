@@ -1,0 +1,8 @@
+---
+# Course-only tool (not used by the pipeline): built into <shared containers>/course/checkm2.sif
+# by bin/prepare_shared_containers.sh
+channels:
+  - conda-forge
+  - bioconda
+dependencies:
+  - bioconda::checkm2=1.0.2

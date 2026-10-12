@@ -47,7 +47,7 @@ you made one on Day 2: the `CHI11E` hybrid assembly. Use its **chromosome only**
 lost too often to follow the same history.
 
 ```bash
-conda activate phylo
+use_tools phylo
 mkdir -p $RESULTS/06_phylogeny/ST39 && cd $RESULTS/06_phylogeny/ST39
 
 # The chromosome is the longest sequence

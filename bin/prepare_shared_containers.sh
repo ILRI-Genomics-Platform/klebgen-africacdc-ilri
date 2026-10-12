@@ -21,7 +21,9 @@
 #      pipeline code and configuration.
 #   2. nf-core module images (https://depot.galaxyproject.org/..., Seqera community images):
 #      downloads each into DIR/nf-core/ under the file name Nextflow looks for.
-#   3. Local module images (DIR/local/*.sif): builds each from its module's environment.yml
+#   3. Local module images (DIR/local/*.sif): builds each from its module's environment.yml,
+#      and the course-only tool images (DIR/course/<tool>.sif: seqkit, FastQC, CheckM2, Bandage, Bakta)
+#      from course/envs/<tool>/environment.yml, for the hands-on sessions (course/tools.sh).
 #      with `singularity build`. Building needs root or --fakeroot; override the command with
 #      BUILD_CMD, e.g.  BUILD_CMD="sudo singularity build"  or  BUILD_CMD="apptainer build --fakeroot".
 #   4. Writes DIR/MANIFEST.tsv (image, source, size, sha256, processes) as a record for the course.
@@ -106,6 +108,15 @@ for p in procs:
         key = ("pull", src, os.path.join(dest, "nf-core", simple_name(src)))
     images.setdefault(key, []).append(p["name"])
 
+# Course-only tools (hands-on sessions, not the pipeline): course/envs/<tool>/environment.yml
+# -> DIR/course/<tool>.sif, listed in MANIFEST.tsv as process COURSE_<TOOL> (course/tools.sh looks them up)
+course_envs = os.path.join(pipeline, "course", "envs")
+if os.path.isdir(course_envs):
+    for name in sorted(os.listdir(course_envs)):
+        env = os.path.join(course_envs, name, "environment.yml")
+        if os.path.exists(env):
+            images.setdefault(("build", env, os.path.join(dest, "course", name + ".sif")), []).append("COURSE_" + name.upper())
+
 # Several local modules may share one image (e.g. KAPTIVE uses KLEBORATE's): build it once,
 # after checking that their environment.yml files ask for the same packages
 merged = {}
@@ -173,9 +184,9 @@ fi
 
 # The folders may already be locked from an earlier run: the owner gets write access back
 chmod u+w "$DIR" 2>/dev/null || true
-mkdir -p "$DIR/nf-core" "$DIR/local" 2>/dev/null || true
-chmod u+w "$DIR/nf-core" "$DIR/local" 2>/dev/null || true
-for d in "$DIR" "$DIR/nf-core" "$DIR/local"; do
+mkdir -p "$DIR/nf-core" "$DIR/local" "$DIR/course" 2>/dev/null || true
+chmod u+w "$DIR/nf-core" "$DIR/local" "$DIR/course" 2>/dev/null || true
+for d in "$DIR" "$DIR/nf-core" "$DIR/local" "$DIR/course"; do
     if [ ! -d "$d" ] || [ ! -w "$d" ]; then
         owner=$(owner_of "$d")
         if [ "$owner" != "$(id -un)" ]; then

@@ -36,7 +36,7 @@ Kleborate screens KpSC assemblies for species, MLST, resistance and virulence lo
 types in a single run.
 
 ```bash
-conda activate typing
+use_tools typing
 kleborate --version
 mkdir -p $RESULTS/03_typing
 
@@ -147,7 +147,7 @@ apart. Transmission needs whole-genome resolution (Day 6).
 ### 4.1 AMRFinderPlus
 
 ```bash
-conda activate amr
+use_tools amr
 amrfinder --version
 AMRDB=$SHARED/databases/amrfinderplus/latest
 amrfinder -d $AMRDB --database_version

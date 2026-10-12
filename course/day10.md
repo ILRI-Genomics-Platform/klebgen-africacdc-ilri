@@ -45,7 +45,7 @@ you have not, and some deliberately difficult samples.
 > time on interpretation, not on waiting.
 
 ```bash
-conda activate nextflow
+use_tools nextflow
 mkdir -p $COURSE/capstone && cd $COURSE/capstone
 nextflow run $SHARED/neonatal-amr-nf/main.nf -profile singularity -c $SITE_CONFIG \
     --input $SHARED/capstone/samplesheet.csv --outdir results \

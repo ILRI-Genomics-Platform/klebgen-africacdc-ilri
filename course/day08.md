@@ -40,7 +40,7 @@ By the end of today you can:
 ### 7.2 Kaptive 3
 
 ```bash
-conda activate typing
+use_tools typing
 mkdir -p $RESULTS/07_antigens
 
 kaptive assembly kpsc_k $COURSE/best/*.fasta -o $RESULTS/07_antigens/kaptive_k.tsv -t $THREADS
@@ -84,7 +84,7 @@ Coverage from 29 hand-picked isolates would be meaningless. Use the published K 
 isolates** in the study instead (`training_data/published_K_O_all.tsv`).
 
 ```bash
-conda activate r-env
+use_tools r
 cd $COURSE && R
 ```
 

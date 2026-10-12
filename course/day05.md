@@ -32,7 +32,7 @@ MOB-suite assigns every reconstructed plasmid to a **cluster** (`primary_cluster
 Two isolates with the same cluster ID probably carry the same plasmid, even if they belong to different STs.
 
 ```bash
-conda activate plasmids
+use_tools plasmids
 # Short-read MOB-suite results for all 29 isolates (pre-computed; or run mob_recon on $COURSE/best/*.fasta)
 cp -rn $SHARED/precomputed/05_plasmids/shortread/* $RESULTS/05_plasmids/shortread/
 
@@ -87,7 +87,7 @@ full answer needs an alignment of the two plasmids.
 ### 5.6 Genetic context: annotate a plasmid with Bakta
 
 ```bash
-conda activate plasmids
+use_tools plasmids
 s=CHI11E
 # Find the plasmid file carrying blaCTX-M-15 (you found it on Day 4, section 5.3)
 P=$RESULTS/05_plasmids/hybrid/$s/plasmid_XXXX.fasta          # <- replace XXXX
@@ -168,7 +168,8 @@ ls $SHARED/containers/local                   # images built for the course's ow
 cut -f1,2,5 $SHARED/containers/MANIFEST.tsv | less -S       # where each image came from
 ```
 
-You can also run a tool from an image directly, without installing anything:
+These are the images you have used all week: `use_tools` runs each command inside its image. Run one
+directly, the way `use_tools` does it for you:
 
 ```bash
 singularity exec $SHARED/containers/local/kleborate-3.2.4.sif kleborate --version
@@ -198,7 +199,7 @@ nextflow run $SHARED/neonatal-amr-nf/main.nf --help
 ### Run 1: a test run (no tools executed)
 
 ```bash
-conda activate nextflow
+use_tools nextflow
 mkdir -p $COURSE/pipeline && cd $COURSE/pipeline
 nextflow run $SHARED/neonatal-amr-nf/main.nf -profile test,singularity -c $SITE_CONFIG -stub \
     --outdir test_results

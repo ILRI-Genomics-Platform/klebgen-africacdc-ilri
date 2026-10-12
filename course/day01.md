@@ -44,6 +44,11 @@ export THREADS=4
 # Site config for running the pipeline (Day 5 and Day 10): your trainer will tell you which
 export SITE_CONFIG=$SHARED/neonatal-amr-nf/conf/slurm.config
 
+# Course software (section 0.3): tools from the shared Singularity images.
+# Your trainer will tell you if your server uses modules instead (TOOL_MODE=module).
+export TOOL_MODE=singularity
+source $SHARED/neonatal-amr-nf/course/tools.sh
+
 # pick 'regex' file: print column 1 plus every column whose header matches regex
 pick() {
     awk -F'\t' -v re="$1" 'NR==1{for(i=2;i<=NF;i++) if($i ~ re) c[++n]=i}
@@ -117,27 +122,44 @@ echo $(( $(zcat $READS/CAA65Z_R1.fastq.gz | wc -l) / 4 ))
 
 </details>
 
-### 0.3 Software environments
+### 0.3 Software
 
-Each group of tools lives in its own conda environment so that versions do not clash. Activate the environment
-before using its tools:
+Nothing is installed in your account. The tools come from **Singularity images** that your trainers prepared in
+`$SHARED/containers/`: one file per tool, holding the tool and everything it needs, at a fixed version. These
+are the same images the pipeline uses on Day 5, so your results by hand and the pipeline's results come from
+the same software. (On some servers your trainer uses **modules** instead; the commands are the same.)
 
-| Environment | Tools | Used on |
+Before using a group of tools, switch it on with `use_tools`:
+
+| Group | Tools | Used on |
 | --- | --- | --- |
 | `qc` | seqkit, FastQC, fastp, NanoPlot, Filtlong, Kraken2, Bracken, MultiQC | Day 1 |
-| `assembly` | Shovill, Autocycler, Flye, Raven, Polypolish, Pypolca, BWA, QUAST, CheckM2 | Day 2 |
+| `assembly` | Shovill, Autocycler, Flye, Raven, BWA, Polypolish, Pypolca, QUAST, CheckM2, Bandage | Day 2 |
 | `medaka` | Medaka | Day 2 |
-| `typing` | Kleborate, Kaptive, mlst, ECTyper, EzClermont | Days 3, 8 |
-| `amr` | AMRFinderPlus, ABRicate | Days 3–4 |
+| `typing` | Kleborate, Kaptive, ECTyper, EzClermont | Days 3, 8 |
+| `amr` | AMRFinderPlus | Days 3–4 |
 | `plasmids` | MOB-suite, Mash, Bakta | Days 4–5 |
-| `phylo` | Snippy, Gubbins, snp-sites, snp-dists, IQ-TREE | Days 6–7 |
-| `r-env` | R, tidyverse, ggtree, BactDating | Days 4, 7–9 |
-| `nextflow` | Nextflow | Day 5 |
+| `phylo` | Snippy, Gubbins, snp-sites, snp-dists, IQ-TREE, seqkit | Days 6–7 |
+| `r` | R with tidyverse, ggtree, BactDating (from your own R library) | Days 4, 7–9 |
+| `nextflow` | Nextflow | Days 5, 10 |
 
 ```bash
-conda activate qc
+use_tools qc
 fastp --version
-conda deactivate
+type fastp          # 'fastp is a function': it runs fastp inside its image for you
+list_tools          # every tool and the image (or module) it comes from
+```
+
+After `use_tools qc` you type `fastp ...` as usual; behind the scenes it runs
+`singularity exec $SHARED/containers/<fastp image> fastp ...`. Switching on another group keeps the earlier
+groups' tools available.
+
+**Once, today: install your R packages.** The R sessions (Days 4 and 7–9) use packages from your own R library
+in your home folder. Installing them needs internet, so run this on the **login node**; it takes 20–40
+minutes, so start it before a break:
+
+```bash
+$SHARED/neonatal-amr-nf/bin/run_R.sh install_r_packages.R      # ends with "All packages installed."
 ```
 
 > [!TIP]
@@ -190,7 +212,7 @@ stops with an error if a sample ID is repeated.
 ### 1.1 Read statistics
 
 ```bash
-conda activate qc
+use_tools qc
 mkdir -p $RESULTS/01_qc
 seqkit stats -a -T -j $THREADS $READS/*.fastq.gz > $RESULTS/01_qc/read_stats.tsv
 cut -f1,4,5,7,13 $RESULTS/01_qc/read_stats.tsv | head
