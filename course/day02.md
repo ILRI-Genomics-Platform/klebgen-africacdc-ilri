@@ -75,7 +75,7 @@ less -S $RESULTS/02_assembly/quast_shovill/transposed_report.tsv
 
 checkm2 predict --input $COURSE/assemblies -x fasta \
     --output-directory $RESULTS/02_assembly/checkm2 --threads $THREADS \
-    --database_path $SHARED/databases/checkm2/uniref100.KO.1.dmnd
+    --database_path $SHARED/databases/checkm2/CheckM2_database/uniref100.KO.1.dmnd
 cut -f1-3 $RESULTS/02_assembly/checkm2/quality_report.tsv | sort -t$'\t' -k3,3gr | head
 ```
 

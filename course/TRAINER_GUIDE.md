@@ -61,10 +61,10 @@ $SHARED/                                   e.g. /var/scratch/global/jjuma/neonat
 ├── data/                                  downloaded reads (training set)
 ├── training_data/                         metadata_compact.tsv, ast_compact.tsv, published_K_O_all.tsv, ...
 ├── databases/
-│   ├── kraken2/                           Kraken2 standard-8 (with Bracken files)
-│   ├── amrfinderplus/latest/              AMRFinderPlus database, plus amrfinderdb.tar.gz
-│   ├── checkm2/uniref100.KO.1.dmnd
-│   └── bakta/db-light/
+│   ├── kraken2/                           Kraken2 Standard-8 (with Bracken files), VERSION (section 5)
+│   ├── amrfinderplus/latest/              AMRFinderPlus database, plus amrfinderdb.tar.gz and VERSION
+│   ├── checkm2/CheckM2_database/uniref100.KO.1.dmnd
+│   └── bakta/db-light/                    Bakta light database v6
 ├── precomputed/                           section 7
 ├── capstone/                              samplesheet.csv, metadata_capstone.tsv, ast_capstone.tsv, precomputed/
 └── public_genomes/ST39/                   optional, Day 9
@@ -156,16 +156,73 @@ already downloaded, so you can re-run it after an interruption.
 
 ## 5. Databases
 
-| Database | Used on | How to get it |
-| --- | --- | --- |
-| Kraken2 standard-8 (with Bracken files) | Day 1 | Download the latest `k2_standard_08gb` from the [Kraken2 index page](https://benlangmead.github.io/aws-indexes/k2) and unpack it into `databases/kraken2/` |
-| AMRFinderPlus | Days 3–5 | `amrfinder_update -d $SHARED/databases/amrfinderplus`, then `tar czf $SHARED/databases/amrfinderplus/amrfinderdb.tar.gz -C $SHARED/databases/amrfinderplus/latest .` |
-| CheckM2 | Day 2 | `checkm2 database --download --path $SHARED/databases/checkm2` |
-| Bakta (light) | Day 5 | `bakta_db download --output $SHARED/databases/bakta --type light` |
+| Database | Version | Download | On disk | Used on | Where |
+| --- | --- | --- | --- | --- | --- |
+| Kraken2 Standard-8, with Bracken files | 2026-06-26 (newest when written) | 5.5 GB | 7.5 GB; needs ~8 GB RAM | Day 1; pipeline (Days 5, 10) | `databases/kraken2/` |
+| AMRFinderPlus | newest at download | small | small | Days 3–5; pipeline | `databases/amrfinderplus/latest/` and `amrfinderdb.tar.gz` |
+| CheckM2 (DIAMOND) | database v2, for CheckM2 1.0.2 | 1.7 GB | a few GB | Day 2 | `databases/checkm2/CheckM2_database/uniref100.KO.1.dmnd` |
+| Bakta light | database v6, for Bakta 1.12 | 1.3 GB | 3.9 GB | Day 5; pipeline `--run_bakta` | `databases/bakta/db-light/` |
+
+In all, about **9 GB to download and 15 GB on disk**. Two other databases need nothing from you:
+
+- **MOB-suite** (Days 4–5): its Bioconda package downloads its databases (about 0.5 GB) when it is installed, so
+  they are inside its image. Check once: `use_tools plasmids && mob_typer --infile <any assembly FASTA> --out_file
+  /tmp/mob_check.txt` should finish without trying to download anything.
+- **Kleborate and Kaptive** (Days 3, 8): they ship with their own databases.
+
+Standard-8 is the Kraken2 database for the course: it needs about 8 GB of memory, so it runs in a participant's
+session. The full Standard database (80 GB download, 103 GB on disk, about 100 GB of memory) classifies a few
+more reads but cannot run there. If your HPC already has one (on the ILRI HPC,
+`/export/data/bio/kraken2/db/standard_20241228`), the pipeline runs that the trainers submit can use it with
+`--kraken2_db`.
+
+### 5.1 Download (once, as the trainer, on a node with internet access)
+
+The tools come from the same images as the course (`course/tools.sh`), so each database matches the version of
+the tool that reads it. Run the blocks one at a time; each ends with a check.
+
+```bash
+export SHARED=/var/scratch/global/jjuma/neonatal-amr/shared
+source $SHARED/neonatal-amr-nf/course/tools.sh
+DB=$SHARED/databases
+mkdir -p $DB
+
+# 1. Kraken2 Standard-8 with Bracken files (5.5 GB download, 7.5 GB unpacked).
+#    Use the newest file name from https://benlangmead.github.io/aws-indexes/k2
+K2=k2_standard_08_GB_20260626
+mkdir -p $DB/kraken2 && cd $DB/kraken2
+wget -c https://genome-idx.s3.amazonaws.com/kraken/$K2.tar.gz
+tar xzf $K2.tar.gz && rm $K2.tar.gz
+echo "$K2" > VERSION
+ls hash.k2d opts.k2d taxo.k2d database150mers.kmer_distrib     # all four must be there
+
+# 2. AMRFinderPlus, with the pipeline's AMRFinderPlus 4.2.7; plus a .tar.gz copy for the pipeline (--amrfinderplus_db)
+use_tools amr
+amrfinder_update -d $DB/amrfinderplus
+tar czf $DB/amrfinderplus/amrfinderdb.tar.gz -C $DB/amrfinderplus/latest .
+amrfinder -d $DB/amrfinderplus/latest --database_version 2>&1 | tee $DB/amrfinderplus/VERSION
+
+# 3. CheckM2 database v2, with CheckM2 1.0.2 (1.7 GB download)
+use_tools assembly
+checkm2 database --download --path $DB/checkm2
+ls -lh $DB/checkm2/CheckM2_database/uniref100.KO.1.dmnd
+
+# 4. Bakta light database v6, with the pipeline's Bakta 1.12 (1.3 GB download, 3.9 GB unpacked);
+#    bakta_db also sets up the AMRFinderPlus files Bakta needs inside it
+use_tools plasmids
+bakta_db download --output $DB/bakta --type light
+ls $DB/bakta/db-light/version.json && cat $DB/bakta/db-light/version.json
+
+# 5. Make the databases read-only for everyone
+find $DB -type d -exec chmod 0555 {} +
+find $DB -type f -exec chmod 0444 {} +
+du -sh $DB/*
+```
 
 > [!NOTE]
-> Record each database's version or download date and give it to participants. AMRFinderPlus results in
-> particular change between database releases.
+> Record each database's version or download date (the `VERSION` files, Bakta's `version.json`) and give
+> them to participants. AMRFinderPlus results in particular change between database releases. To update a
+> database later, give yourself write permission again (`chmod -R u+w $DB/<name>`) and repeat its block.
 
 ## 6. Software for the hands-on sessions
 
@@ -197,8 +254,8 @@ bin/prepare_shared_containers.sh --check          # every image, pipeline and co
 source course/tools.sh && list_tools              # as a participant: every tool and its image
 ```
 
-Keep the databases in step with these versions: CheckM2 1.0.2 reads `uniref100.KO.1.dmnd`; Bakta 1.12 (the
-pipeline's) needs a version 6 database: download it with Bakta 1.10 or later (`db-light` is enough).
+Keep the databases in step with these versions: CheckM2 1.0.2 reads database v2; Bakta 1.12 (the pipeline's)
+needs a version 6 database. Section 5.1 downloads both with these images, so they match.
 
 **Modules instead of images.** If your HPC provides the tools as modules, participants set
 `export TOOL_MODE=module` in `~/.bashrc` (Day 1, section 0.1) and `use_tools <group>` runs `module load` for

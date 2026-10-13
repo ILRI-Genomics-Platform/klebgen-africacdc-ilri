@@ -19,8 +19,13 @@ OUTDIR="${OUTDIR:-/var/scratch/global/${USER}/neonatal-amr/step_by_step}"
 # Shared, read-only resources prepared by the trainer (the same ones the pipeline uses)
 CONTAINERS="${CONTAINERS:-/var/scratch/global/jjuma/neonatal-amr/shared/containers}"
 REFERENCES="${REFERENCES:-/var/scratch/global/jjuma/neonatal-amr/shared/references}"
-KRAKEN2_DB="${KRAKEN2_DB:-/export/data/bio/kraken2/db/standard_20241228}"
-AMRFINDER_DB="${AMRFINDER_DB:-}"        # .tar.gz or folder; empty = download it in step 08 (needs internet)
+SHARED_DIR="${SHARED:-/var/scratch/global/jjuma/neonatal-amr/shared}"
+KRAKEN2_DB="${KRAKEN2_DB:-${SHARED_DIR}/databases/kraken2}"   # Standard-8 (~8 GB RAM); the full Standard needs ~100 GB
+# AMRFinderPlus: the course's shared database if there is one; empty = download it in step 08 (needs internet)
+if [ -z "${AMRFINDER_DB:-}" ] && [ -d "${SHARED_DIR}/databases/amrfinderplus/latest" ]; then
+    AMRFINDER_DB="${SHARED_DIR}/databases/amrfinderplus/latest"
+fi
+AMRFINDER_DB="${AMRFINDER_DB:-}"        # .tar.gz or folder
 REFERENCE_SHEET="${REFERENCE_SHEET:-${PIPELINE_DIR}/conf/phylo_references.csv}"
 MIN_GROUP="${MIN_GROUP:-2}"             # phylogeny: smallest group (species + ST) that is analysed
 

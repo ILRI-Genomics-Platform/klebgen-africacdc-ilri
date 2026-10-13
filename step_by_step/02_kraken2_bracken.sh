@@ -4,8 +4,8 @@
 #
 #   bash step_by_step/02_kraken2_bracken.sh [sample ... | all]
 #
-# Needs: step 01 (trimmed reads). Kraken2 loads the whole database into memory: run it on a node with
-# enough RAM (the standard database needs ~80 GB; the pipeline sends it to compute05).
+# Needs: step 01 (trimmed reads). Kraken2 loads the whole database into memory: the course's Standard-8
+# database (KRAKEN2_DB) needs ~8 GB, so a session with --mem=16G is enough (the full Standard needs ~100 GB).
 # What it does: Kraken2 assigns each read pair to a taxon; Bracken re-estimates species abundance
 # from Kraken2's report (-l S: species level; -t 10: ignore species with fewer than 10 reads).
 # Output (01_qc/kraken2/, 01_qc/bracken/): <sample>.kraken2.report.txt, <sample>.tsv (Bracken species table)

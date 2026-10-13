@@ -19,7 +19,7 @@ cd /path/to/neonatal-amr-nf          # the pipeline folder
 module load singularity              # or apptainer; whatever `module avail` shows on your HPC
 ```
 
-Step 02 (Kraken2) loads the whole database into memory. For that step, ask for more: `--mem=96G`.
+Step 02 (Kraken2) loads the whole database into memory: the course's Standard-8 database needs about 8 GB.
 
 **2. Check the settings** at the top of `step_by_step/config.sh`. The defaults use the 5-sample test set
 and the course's shared images, references and Kraken2 database:
@@ -30,8 +30,8 @@ and the course's shared images, references and Kraken2 database:
 | `OUTDIR` | `/var/scratch/global/$USER/neonatal-amr/step_by_step` | Where your results go |
 | `CONTAINERS` | `.../shared/containers` | The pipeline's Singularity images (read-only) |
 | `REFERENCES` | `.../shared/references` | Reference genomes for the phylogeny (step 11) |
-| `KRAKEN2_DB` | `/export/data/bio/kraken2/db/standard_20241228` | Kraken2 + Bracken database (step 02) |
-| `AMRFINDER_DB` | empty | AMRFinderPlus database; empty = download it in step 08 (needs internet) |
+| `KRAKEN2_DB` | `$SHARED/databases/kraken2` | Kraken2 Standard-8 + Bracken database (step 02; course trainer guide, section 5) |
+| `AMRFINDER_DB` | `$SHARED/databases/amrfinderplus/latest` if present | AMRFinderPlus database; empty = download it in step 08 (needs internet) |
 | `MIN_GROUP` | 2 | Smallest species + ST group that gets a phylogeny |
 | `TOOL_MODE` | `singularity` | `singularity`: tools from the pipeline's images; `module`: tools on your `PATH` |
 | `THREADS`, `MEM_GB` | your Slurm allocation (1 CPU in a course session) | CPUs and memory given to the tools |
@@ -85,7 +85,7 @@ Rough estimates for a course session with 1 CPU; with more CPUs most steps are f
 | Step | Needs | Time |
 |---|---|---|
 | 01 fastp | reads | 2-5 min |
-| 02 Kraken2/Bracken | step 01; ~80 GB RAM | 5-15 min (plus loading the database) |
+| 02 Kraken2/Bracken | step 01; ~8 GB RAM (Standard-8) | 5-15 min (plus loading the database) |
 | 03 long-read QC | ONT reads (others are skipped) | 5-10 min |
 | 04 Shovill | step 01 | 45-90 min |
 | 05 hybrid assembly | steps 01 and 03; ONT reads | several hours (eight assemblies): use `run_all.sh` as a batch job, or the pre-computed assemblies |
@@ -113,7 +113,7 @@ species in `conf/phylo_references.csv`. So run step 07 on all samples first. A g
 
 ```bash
 mkdir -p logs
-sbatch step_by_step/run_all.sh                       # as a Slurm job (8 CPUs, 96 GB, compute05)
+sbatch step_by_step/run_all.sh                       # as a Slurm job (8 CPUs, 32 GB, compute05)
 SKIP="05 10" bash step_by_step/run_all.sh            # in your session, without the hybrid assembly and Prokka
 ```
 
@@ -197,7 +197,7 @@ The commands and options are the same. The way they are run differs:
 | `singularity/apptainer not found` | `module load singularity` (or apptainer) |
 | `... not found or empty: run step NN first` | Run the step it names for that sample first |
 | `Kraken2 database not found` | Set `KRAKEN2_DB` to the database folder |
-| Kraken2 is killed, or `std::bad_alloc` | Not enough memory: start a session with `--mem=96G` or more |
+| Kraken2 is killed, or `std::bad_alloc` | Not enough memory: Standard-8 needs about 8 GB, so start the session with `--mem=16G` or more (the full Standard database needs about 100 GB) |
 | A container cannot see your files | Add their top folder to `BINDS` in `config.sh` (e.g. `BINDS="/var/scratch,/export/data,$HOME,/data"`) |
 | `group ... has 1 isolate(s) (< MIN_GROUP=2); skipped` | Expected: a phylogeny needs at least two isolates of the same species and ST |
 | AMRFinderPlus download fails | The compute node has no internet. Run step 08 once on the login node, or set `AMRFINDER_DB` |

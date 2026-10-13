@@ -92,6 +92,7 @@ s=CHI11E
 # Find the plasmid file carrying blaCTX-M-15 (you found it on Day 4, section 5.3)
 P=$RESULTS/05_plasmids/hybrid/$s/plasmid_XXXX.fasta          # <- replace XXXX
 
+cat $SHARED/databases/bakta/db-light/version.json        # Bakta light database, version 6
 bakta --db $SHARED/databases/bakta/db-light --output $RESULTS/05_plasmids/bakta_$s \
     --prefix ${s}_ctxm_plasmid --threads $THREADS $P
 

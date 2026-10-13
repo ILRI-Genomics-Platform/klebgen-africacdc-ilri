@@ -306,7 +306,8 @@ mostly add noise.
 
 ```bash
 mkdir -p $RESULTS/01_qc/kraken2
-KDB=$SHARED/databases/kraken2
+KDB=$SHARED/databases/kraken2          # Kraken2 Standard-8, with Bracken files (needs ~8 GB of memory)
+cat $KDB/VERSION                       # record the database version with your results
 
 for r1 in $COURSE/trimmed/*_R1.fastq.gz; do
     s=$(basename $r1 _R1.fastq.gz)
