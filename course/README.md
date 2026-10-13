@@ -174,9 +174,21 @@ flowchart TD
 
 ---
 
+## Every day: log in and start your session
+
+```bash
+ssh -y user7@hpc.ilri.cgiar.org     # your own account in place of user7
+start_session                       # an interactive session with 1 CPU on your course node (from Day 1, section 0.1)
+```
+
+Odd-numbered accounts (`user1`, `user3`, …) work on `compute05`, even-numbered ones (`user2`, `user4`, …) on
+`compute06`; `start_session` picks the right one. Before section 0.1 on Day 1, use
+`interactive -w compute05 -c 1` (odd) or `interactive -w compute06 -c 1` (even). Type `exit` to end it.
+
 ## Before Day 1
 
-- [ ] You can log in to the course server (your trainer sends the details).
+- [ ] You can log in to the HPC with your course account (`user1` to `user30`; your trainer sends it and its
+      password): `ssh -y user7@hpc.ilri.cgiar.org`, with your own account in place of `user7`.
 - [ ] You have a text editor you are comfortable with (`nano` on the server is fine).
 - [ ] You have a web browser to open HTML reports.
 - [ ] Optional: you have skimmed the [Genome Medicine 2024 paper](https://doi.org/10.1186/s13073-024-01342-3).

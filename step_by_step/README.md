@@ -11,10 +11,12 @@ the commands the pipeline's processes run. The results go into the same folder l
 
 ## Before you start
 
-**1. Get an interactive session on a compute node.** Do not run tools on the login node.
+**1. Get an interactive session on a compute node.** Do not run tools on the login node. On the course,
+odd-numbered accounts (`user1`, `user3`, …) use `compute05` and even-numbered ones (`user2`, `user4`, …) use
+`compute06`, with 1 CPU (`start_session` from the course's Day 1 setup picks the node for you):
 
 ```bash
-srun -w compute05 --cpus-per-task=1 --mem=32G --time=08:00:00 --pty bash      # 1 CPU per trainee
+interactive -w compute05 -c 1        # odd account numbers; even numbers: interactive -w compute06 -c 1
 cd /path/to/neonatal-amr-nf          # the pipeline folder
 module load singularity              # or apptainer; whatever `module avail` shows on your HPC
 ```

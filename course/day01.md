@@ -27,6 +27,35 @@ By the end of today you can:
 
 ## Module 0: Foundations
 
+### 0.0 Log in and start your session
+
+You have a course account, `user1` to `user30`; your trainer gives you yours and its password. Log in to the HPC
+from a terminal (on Windows: PowerShell, MobaXterm or PuTTY), replacing `user7` with your account:
+
+```bash
+ssh -y user7@hpc.ilri.cgiar.org
+```
+
+You arrive on the **login node**, which everyone shares. Do the course's work in an **interactive session** on a
+compute node, with 1 CPU. Half of the class works on each of the two course nodes, by account number:
+
+| Your account | Node | Start your session with |
+| --- | --- | --- |
+| Odd number: `user1`, `user3`, … `user29` | `compute05` | `interactive -w compute05 -c 1` |
+| Even number: `user2`, `user4`, … `user30` | `compute06` | `interactive -w compute06 -c 1` |
+
+```bash
+interactive -w compute05 -c 1        # user1, user3, user5, ...  (even numbers: compute06)
+hostname                             # check: compute05 or compute06
+```
+
+From tomorrow, after section 0.1, the command `start_session` does this for you: it picks the node from your
+account number. Type `exit` to end the session at the end of the day.
+
+> [!IMPORTANT]
+> Only one step in the course runs on the **login node** instead, because it needs the internet: installing
+> your R packages (section 0.3). Everything else runs in your session.
+
 ### 0.1 Set up your course folder
 
 > [!IMPORTANT]
@@ -49,6 +78,15 @@ export SITE_CONFIG=$SHARED/neonatal-amr-nf/conf/slurm.config
 # Your trainer will tell you if your server uses modules instead (TOOL_MODE=module).
 export TOOL_MODE=singularity
 source $SHARED/neonatal-amr-nf/course/tools.sh
+
+# start_session: an interactive session with 1 CPU on your course node
+# (odd account numbers, user1, user3, ...: compute05; even numbers: compute06)
+start_session() {
+    local n=${USER//[!0-9]/} node=compute05
+    if [ -n "$n" ] && [ $(( 10#$n % 2 )) -eq 0 ]; then node=compute06; fi
+    echo "Starting an interactive session on $node with 1 CPU (type 'exit' to end it)"
+    interactive -w "$node" -c 1
+}
 
 # pick 'regex' file: print column 1 plus every column whose header matches regex
 pick() {
@@ -262,7 +300,7 @@ for r1 in $READS/*_R1.fastq.gz; do
           -o $COURSE/trimmed/${s}_R1.fastq.gz -O $COURSE/trimmed/${s}_R2.fastq.gz \
           --qualified_quality_phred 20 --length_required 50 \
           -j $RESULTS/01_qc/fastp/${s}.fastp.json -h $RESULTS/01_qc/fastp/${s}.fastp.html \
-          -w $THREADS 2> $RESULTS/01_qc/fastp/${s}.log
+          -w $THREADS 2>&1 | tee $RESULTS/01_qc/fastp/${s}.log
 done
 
 # One report for all samples

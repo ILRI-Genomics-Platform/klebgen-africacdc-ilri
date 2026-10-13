@@ -25,13 +25,13 @@ server before participants arrive.
 
 | When | Task |
 | --- | --- |
-| 3 weeks before | Server accounts and a course Unix group; create `$SHARED`; set up the software (section 6) |
+| 3 weeks before | Participant accounts `user1` to `user30` and a course Unix group (section 2); create `$SHARED`; set up the software (section 6) |
 | 3 weeks before | Prepare and lock the pipeline's Singularity images (section 7) |
 | 3 weeks before | Download data (section 4) and databases (section 5, after the images of section 7) |
 | 2 weeks before | Run the pipeline on the training and capstone sets (section 8) |
 | 2 weeks before | Pre-compute the manual steps (section 8) |
 | 1 week before | Dry run: one trainer works through every page, Day 1 to Day 10, on a participant account |
-| 1 day before | Check every participant can log in and run `use_tools qc && fastp --version`, and has installed their R packages |
+| 1 day before | Check every account can log in (`ssh -y userN@hpc.ilri.cgiar.org`), start a session on its node and run `use_tools qc && fastp --version` |
 | 1 day before | As a participant: `bin/prepare_shared_containers.sh --check` shows all images present |
 
 ## 2. Hardware
@@ -44,6 +44,23 @@ server before participants arrive.
 
 The Kraken2 standard-8 database needs about 8 GB of RAM per running job. If 25 people run Kraken2 at once, stagger
 the session or have half the room use pre-computed reports.
+
+**Participant accounts and nodes (ILRI HPC).** Participants log in as `user1` to `user30`
+(`ssh -y userN@hpc.ilri.cgiar.org`) and work in interactive sessions with 1 CPU, split over the two course nodes
+by account number:
+
+| Accounts | Node | Command | Participants per node |
+| --- | --- | --- | --- |
+| Odd: `user1`, `user3`, … `user29` | `compute05` | `interactive -w compute05 -c 1` | 15 |
+| Even: `user2`, `user4`, … `user30` | `compute06` | `interactive -w compute06 -c 1` | 15 |
+
+Day 1 (section 0.1) adds a `start_session` command to each participant's `~/.bashrc` that picks the node from
+the account number. Before the course, check that:
+
+- `interactive -c 1` gives a session enough memory for Kraken2 Standard-8 (about 10 GB). If its default is lower,
+  tell participants the option for more memory, or have them use the pre-computed Kraken2 reports.
+- Each node has memory for 15 sessions at once (15 × 10 GB = 150 GB at the Kraken2 step).
+- Participant accounts are allowed to request `compute05` and `compute06` with `-w`.
 
 ## 3. The shared folder
 
