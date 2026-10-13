@@ -27,7 +27,7 @@ server before participants arrive.
 | --- | --- |
 | 3 weeks before | Server accounts and a course Unix group; create `$SHARED`; set up the software (section 6) |
 | 3 weeks before | Prepare and lock the pipeline's Singularity images (section 7) |
-| 3 weeks before | Download data (section 4) and databases (section 5) |
+| 3 weeks before | Download data (section 4) and databases (section 5, after the images of section 7) |
 | 2 weeks before | Run the pipeline on the training and capstone sets (section 8) |
 | 2 weeks before | Pre-compute the manual steps (section 8) |
 | 1 week before | Dry run: one trainer works through every page, Day 1 to Day 10, on a participant account |
@@ -179,7 +179,9 @@ more reads but cannot run there. If your HPC already has one (on the ILRI HPC,
 ### 5.1 Download (once, as the trainer, on a node with internet access)
 
 The tools come from the same images as the course (`course/tools.sh`), so each database matches the version of
-the tool that reads it. Run the blocks one at a time; each ends with a check.
+the tool that reads it. **Prepare the images first** (section 7.1, `bin/prepare_shared_containers.sh`): it also
+builds the course-only images (CheckM2, seqkit, FastQC, Bandage) that block 3 needs. Run the blocks one at a time;
+each ends with a check.
 
 ```bash
 export SHARED=/var/scratch/global/jjuma/neonatal-amr/shared
@@ -202,10 +204,17 @@ amrfinder_update -d $DB/amrfinderplus
 tar czf $DB/amrfinderplus/amrfinderdb.tar.gz -C $DB/amrfinderplus/latest .
 amrfinder -d $DB/amrfinderplus/latest --database_version 2>&1 | tee $DB/amrfinderplus/VERSION
 
-# 3. CheckM2 database v2, with CheckM2 1.0.2 (1.7 GB download)
+# 3. CheckM2 database v2, the one CheckM2 1.0.2 uses (1.7 GB download). Downloaded directly: inside the read-only
+#    image, `checkm2 database --download` fails at its last step (it tries to save the path in its own install).
+#    The course passes --database_path, so that saved path is not needed.
+mkdir -p $DB/checkm2 && cd $DB/checkm2
+wget -c -O checkm2_database.tar.gz "https://zenodo.org/records/5571251/files/checkm2_database.tar.gz?download=1"
+echo "f35c40f58efaf112d29fc187a88af6f5  checkm2_database.tar.gz" | md5sum -c -
+tar xzf checkm2_database.tar.gz && rm checkm2_database.tar.gz
+ls -lh CheckM2_database/uniref100.KO.1.dmnd
+echo "aff3badcd2bd389539e833b5a0d446c13fb257d71abcb6c73fac38e8ab070acb  CheckM2_database/uniref100.KO.1.dmnd" | sha256sum -c -
 use_tools assembly
-checkm2 database --download --path $DB/checkm2
-ls -lh $DB/checkm2/CheckM2_database/uniref100.KO.1.dmnd
+checkm2 testrun --database_path $DB/checkm2/CheckM2_database/uniref100.KO.1.dmnd --threads 1   # ends with test results
 
 # 4. Bakta light database v6, with the pipeline's Bakta 1.12 (1.3 GB download, 3.9 GB unpacked);
 #    bakta_db also sets up the AMRFinderPlus files Bakta needs inside it

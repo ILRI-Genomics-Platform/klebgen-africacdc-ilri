@@ -9,7 +9,7 @@
 #     use_tools medaka      # Medaka
 #     use_tools typing      # Kleborate, Kaptive, ECTyper, EzClermont
 #     use_tools amr         # AMRFinderPlus
-#     use_tools plasmids    # MOB-suite, Mash, Bakta
+#     use_tools plasmids    # MOB-suite, Mash, Bakta (bakta, bakta_db)
 #     use_tools phylo       # Snippy, SKA2, Gubbins, snp-sites, snp-dists, IQ-TREE, seqkit
 #     use_tools r           # R (module) with your own package library
 #     use_tools nextflow    # Nextflow (module)
@@ -39,7 +39,7 @@ declare -gA GROUP_TOOLS=(
     [medaka]="medaka_consensus medaka"
     [typing]="kleborate kaptive ectyper ezclermont"
     [amr]="amrfinder amrfinder_update"
-    [plasmids]="mob_recon mob_typer mash bakta"
+    [plasmids]="mob_recon mob_typer mash bakta bakta_db"
     [phylo]="snippy snippy-core snippy-clean_full_aln ska run_gubbins.py snp-sites snp-dists iqtree seqkit"
 )
 
@@ -54,7 +54,7 @@ declare -gA TOOL_IMAGE=(
     [amrfinder]=AMRFINDERPLUS_RUN [amrfinder_update]=AMRFINDERPLUS_RUN
     [mob_recon]=MOBSUITE_RECON [mob_typer]=MOBSUITE_RECON [mash]=MOBSUITE_RECON
     [snippy]=SNIPPY_RUN [snippy-core]=SNIPPY_RUN [snippy-clean_full_aln]=SNIPPY_RUN [snp-sites]=SNIPPY_RUN
-    [run_gubbins.py]=GUBBINS [snp-dists]=SNPDISTS [iqtree]=IQTREE [ska]=SKA2 [bakta]=BAKTA_BAKTA
+    [run_gubbins.py]=GUBBINS [snp-dists]=SNPDISTS [iqtree]=IQTREE [ska]=SKA2 [bakta]=BAKTA_BAKTA [bakta_db]=BAKTA_BAKTA
     [seqkit]=COURSE_SEQKIT [fastqc]=COURSE_FASTQC [checkm2]=COURSE_CHECKM2 [Bandage]=COURSE_BANDAGE
 )
 
