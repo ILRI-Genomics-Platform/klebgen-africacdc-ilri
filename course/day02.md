@@ -44,7 +44,7 @@ Expected genome size: *K. pneumoniae* about **5.2–5.8 Mb** (GC about 57%); *E.
 use_tools assembly
 mkdir -p $RESULTS/02_assembly/shovill
 
-# One sample first (allow roughly 15-30 minutes with 4 threads). CHI11E is also one of the hybrid
+# One sample first (with 1 thread, allow roughly an hour; start it before a break). CHI11E is also one of the hybrid
 # isolates, so you can compare this assembly with its hybrid assembly this afternoon.
 s=CHI11E
 shovill --R1 $COURSE/trimmed/${s}_R1.fastq.gz --R2 $COURSE/trimmed/${s}_R2.fastq.gz \
@@ -120,8 +120,9 @@ cd $COURSE
 ```
 
 > [!NOTE]
-> This builds 8 assemblies and takes a while (roughly 1–2 hours with 4 threads). Start it, then read 2.5 while
-> it runs. Pre-computed results are in `$SHARED/precomputed/02_assembly/autocycler/`.
+> This builds 8 assemblies: with 1 thread it takes several hours, longer than the session. Start it, read 2.5
+> while it runs, and continue from the pre-computed results in `$SHARED/precomputed/02_assembly/autocycler/`;
+> compare them with yours when it finishes.
 
 ### 2.5 Polishing: Medaka, Polypolish, Pypolca
 

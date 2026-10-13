@@ -9,7 +9,7 @@
 | 1 | 09:00–10:30 | From reads to a core-genome SNP alignment (Snippy) | 6 |
 | 2 | 11:00–12:30 | Recombination and why it matters (Gubbins) | 6 |
 | 3 | 13:30–15:00 | Maximum-likelihood trees (IQ-TREE) | 6 |
-| 4 | 15:30–17:00 | SNP distances and what a threshold can and cannot tell you | 6 |
+| 4 | 15:30–17:00 | SNP distances, a reference-free check with SKA2, and what a threshold can and cannot tell you | 6 |
 
 **You will produce:** a recombination-filtered tree and a SNP-distance matrix for the ST39 group.
 
@@ -21,6 +21,7 @@ By the end of today you can:
 - Explain why recombination inflates SNP counts, and remove it with Gubbins.
 - Build a maximum-likelihood tree with branch support.
 - Calculate pairwise SNP distances and use a threshold as **evidence**, not proof, of transmission.
+- Compare reference-based (Snippy) and reference-free (SKA2) SNP distances.
 
 ---
 
@@ -168,7 +169,56 @@ for t in within_cluster cluster_vs_other other_vs_other; do
 done
 ```
 
-### 6.8 What does a SNP threshold mean?
+### 6.8 A reference-free check: SKA2
+
+Snippy compares isolates only where they map to the reference. **SKA2** (split k-mer analysis) needs no
+reference: it cuts every genome into *split k-mers*, 31 bp pieces whose middle base is left out, and finds pairs
+of isolates where the same 30 flanking bases have a different middle base. That is a SNP. It is fast, works from
+reads or assemblies, and is well suited to closely related isolates such as one ST.
+
+```bash
+use_tools phylo
+cd $RESULTS/06_phylogeny/ST39
+ST39="CAA65Z CAA99X CAA47J CAA4X5 CAA574 CAA5XX CAA5YM CAA4GD D29438 BKR8JH BHB7VE CHI11E"   # as in 6.3
+
+# 1. Split k-mers of every isolate, from its best assembly: one line per isolate, name <tab> file
+for s in $ST39; do printf '%s\t%s\n' $s $COURSE/best/$s.fasta; done > ska_inputs.tsv
+ska build -f ska_inputs.tsv -o ST39_ska -k 31 --threads $THREADS
+
+# 2. SNP distances between every pair of isolates (columns: Sample1, Sample2, Distance, Mismatches)
+ska distance ST39_ska.skf -o ST39_ska_distances.tsv
+head ST39_ska_distances.tsv
+
+# 3. Put the SKA2 distance next to the Snippy + Gubbins distance for each pair (from 6.7)
+awk -F'\t' 'NR == FNR { if (FNR > 1) { k = ($1 < $2) ? $1" "$2 : $2" "$1; ska[k] = $3 }; next }
+            { k = ($1 < $2) ? $1" "$2 : $2" "$1; print $1"\t"$2"\t"$3"\t"ska[k]"\t"$4 }' \
+    ST39_ska_distances.tsv ST39_pairs.tsv > ST39_snippy_vs_ska.tsv
+echo -e "isolate1\tisolate2\tsnippy_gubbins\tska2\tpair_type" | cat - ST39_snippy_vs_ska.tsv | expand -t 16 | less
+```
+
+<details>
+<summary><b>Are the SKA2 distances larger or smaller than the Snippy + Gubbins ones? Why?</b></summary>
+
+Several things pull in different directions:
+
+- **Recombination**: SKA2's distances are raw; Gubbins removed recombined regions from the Snippy distances. If
+  a pair differs by a recombination event, SKA2's distance is larger.
+- **More genome**: SKA2 compares everything two isolates share, including genes and plasmids the reference
+  (CHI11E's chromosome) lacks, so it can find SNPs Snippy cannot see.
+- **Fewer SNPs in dense regions**: a split k-mer needs 15 identical bases on each side, so SNPs close to another
+  variant, and indels, are missed.
+
+What matters for transmission is whether the **ranking** of pairs and the within-cluster distances agree: if both
+methods put the cluster isolates a few SNPs apart and the background far away, the conclusion does not depend
+on the method.
+
+</details>
+
+> **In the pipeline.** `--phylo_method ska2` uses SKA2 instead of Snippy for every group: `ska map` places the
+> split k-mers on the same reference, so Gubbins, IQ-TREE and snp-dists run as before, and
+> `06_phylogeny/<group>/<group>.ska_distances.tsv` holds the reference-free distances you made here.
+
+### 6.9 What does a SNP threshold mean?
 
 > [!WARNING]
 > There is no universal SNP threshold for transmission. For *K. pneumoniae*, **fewer than about 20–25 core SNPs**
@@ -234,12 +284,15 @@ within the group.
 - [ ] `ST39.treefile` and `ST39_snp_dists_filtered.tsv` exist.
 - [ ] You compared raw and recombination-filtered distances.
 - [ ] You have min, median and max distances for within-cluster and cluster-versus-other pairs.
+- [ ] You compared Snippy + Gubbins distances with SKA2's (`ST39_snippy_vs_ska.tsv`).
 - [ ] Optional: ST35 tree and distances.
 
 ## Further reading
 
 - [Snippy](https://github.com/tseemann/snippy), [Gubbins](https://github.com/nickjcroucher/gubbins),
-  [IQ-TREE](https://iqtree.github.io)
+  [IQ-TREE](https://iqtree.github.io), [SKA2](https://github.com/bacpop/ska.rust)
+- Derelle R *et al.* Seamless, rapid, and accurate analyses of outbreak genomic data using split k-mer analysis.
+  *Genome Research* 2024;34:1661–1673. [doi:10.1101/gr.279449.124](https://doi.org/10.1101/gr.279449.124)
 - Cornick J *et al.* Genomic investigation of a suspected *Klebsiella pneumoniae* outbreak in a neonatal care
   unit in sub-Saharan Africa. *Microbial Genomics* 2021. [Full text on PubMed Central](https://pmc.ncbi.nlm.nih.gov/articles/PMC8743538)
 

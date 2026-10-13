@@ -36,11 +36,12 @@ By the end of today you can:
 ```bash
 # Your trainer will tell you the value of SHARED and THREADS
 cat >> ~/.bashrc <<'EOF'
+# >>> neonatal-amr course >>>
 export SHARED=/var/scratch/global/jjuma/neonatal-amr/shared
 export COURSE=$HOME/neonatal-amr-course
 export READS=$COURSE/reads
 export RESULTS=$COURSE/results
-export THREADS=4
+export THREADS=1          # CPU threads per command: 1 in the course's interactive sessions
 # Site config for running the pipeline (Day 5 and Day 10): your trainer will tell you which
 export SITE_CONFIG=$SHARED/neonatal-amr-nf/conf/slurm.config
 
@@ -54,6 +55,7 @@ pick() {
     awk -F'\t' -v re="$1" 'NR==1{for(i=2;i<=NF;i++) if($i ~ re) c[++n]=i}
         {line=$1; for(j=1;j<=n;j++) line=line"\t"$c[j]; print line}' "$2"
 }
+# <<< neonatal-amr course <<<
 EOF
 source ~/.bashrc
 
@@ -61,6 +63,18 @@ mkdir -p $COURSE $READS $RESULTS
 cp -r $SHARED/training_data $COURSE/
 ls $COURSE/training_data
 ```
+
+> [!TIP]
+> **Switching the course set-up off** (after the course, or to use your own software): everything above sits
+> between the `>>> neonatal-amr course >>>` and `<<< neonatal-amr course <<<` lines of `~/.bashrc`. This
+> comments those lines out, and the second command puts them back:
+>
+> ```bash
+> sed -i '/>>> neonatal-amr course >>>/,/<<< neonatal-amr course <<</ s/^/#OFF# /' ~/.bashrc   # off
+> sed -i 's/^#OFF# //' ~/.bashrc                                                              # on again
+> ```
+>
+> Then open a new terminal (or run `exec bash`). Your files in `$COURSE` are not touched.
 
 Now make short, readable names for the read files. The sample sheet lists each sample's files:
 
@@ -139,7 +153,7 @@ Before using a group of tools, switch it on with `use_tools`:
 | `typing` | Kleborate, Kaptive, ECTyper, EzClermont | Days 3, 8 |
 | `amr` | AMRFinderPlus | Days 3–4 |
 | `plasmids` | MOB-suite, Mash, Bakta | Days 4–5 |
-| `phylo` | Snippy, Gubbins, snp-sites, snp-dists, IQ-TREE, seqkit | Days 6–7 |
+| `phylo` | Snippy, SKA2, Gubbins, snp-sites, snp-dists, IQ-TREE, seqkit | Days 6–7 |
 | `r` | R with tidyverse, ggtree, BactDating (from your own R library) | Days 4, 7–9 |
 | `nextflow` | Nextflow | Days 5, 10 |
 

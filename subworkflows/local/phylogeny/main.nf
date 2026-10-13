@@ -5,6 +5,12 @@
 //   reads --snippy--> core alignment --clean--> Gubbins --> IQ-TREE
 //                                                     \--> snp-dists
 //
+// Method (--phylo_method):
+//   snippy (default) map each isolate's reads (or contigs: snippy --ctgs) to the reference; snippy-core
+//   ska2             split k-mers of the whole group (SKA2): ska build, then ska map onto the same reference.
+//                    Its alignment has the same layout as snippy-core's, so the steps after it are the same.
+//                    Also writes reference-free SNP distances (<group>.ska_distances.tsv).
+//
 // Groups and references (--phylo_grouping):
 //   kleborate   (default) group = species + ST reported by Kleborate, e.g. Kpneumoniae_ST39.
 //               Reference from the sheet --phylo_reference_sheet (conf/phylo_references.csv):
@@ -25,6 +31,7 @@ include { IQTREE       } from '../../../modules/nf-core/iqtree/main'
 include { SNPDISTS     } from '../../../modules/nf-core/snpdists/main'
 include { SNIPPY_CLEAN } from '../../../modules/local/snippy/clean/main'
 include { SNIPPY_CONTIGS } from '../../../modules/local/snippy/contigs/main'
+include { SKA2          } from '../../../modules/local/ska2/main'
 
 workflow PHYLOGENY {
 
@@ -37,6 +44,7 @@ workflow PHYLOGENY {
     reference_dir       // folder with <accession>.fasta (kleborate mode)
     phylo_references    // CSV group,fasta or null (samplesheet mode)
     min_group_size      // groups smaller than this are skipped
+    method              // 'snippy' or 'ska2'
 
     main:
     if (grouping == 'kleborate') {
@@ -113,39 +121,64 @@ workflow PHYLOGENY {
         }
         .map { group, _n -> group }
 
-    // ---- map each isolate to its group reference: reads with Snippy, assemblies with snippy --ctgs
-    ch_to_map = ch_reads_grouped
-        .map { meta, reads -> [meta.phylo_group, meta, reads] }
-        .combine(ch_kept_groups, by: 0)
-        .combine(ch_refs, by: 0)
-        .branch { _group, meta, _reads, _ref ->
-            contigs: meta.input_type == 'assembly'
-            reads:   true
+    ch_full_aln      = channel.empty()
+    ch_core_aln      = channel.empty()
+    ch_ska_distances = channel.empty()
+    if (method == 'ska2') {
+        // ---- SKA2: one run per group, on all its isolates (reads and/or contigs) and its reference
+        ch_ska_in = ch_reads_grouped
+            .map { meta, files -> [meta.phylo_group, meta, files] }
+            .combine(ch_kept_groups, by: 0)
+            .map { group, meta, files ->
+                def list = files instanceof List ? files : [files]
+                [group, meta.id, list.size(), list]
+            }
+            .groupTuple()
+            .combine(ch_refs, by: 0)
+            .multiMap { group, ids, nfiles, files, ref ->
+                ska: [[id: group], ids, nfiles, files.flatten()]
+                ref: ref
+            }
+        SKA2(ch_ska_in.ska, ch_ska_in.ref)
+        ch_full_aln      = SKA2.out.full_aln
+        ch_ska_distances = SKA2.out.distances
+    } else {
+        // ---- map each isolate to its group reference: reads with Snippy, assemblies with snippy --ctgs
+        ch_to_map = ch_reads_grouped
+            .map { meta, reads -> [meta.phylo_group, meta, reads] }
+            .combine(ch_kept_groups, by: 0)
+            .combine(ch_refs, by: 0)
+            .branch { _group, meta, _reads, _ref ->
+                contigs: meta.input_type == 'assembly'
+                reads:   true
+            }
+        ch_snippy_reads = ch_to_map.reads.multiMap { _group, meta, reads, ref ->
+            reads: [meta, reads]
+            ref:   ref
         }
-    ch_snippy_reads = ch_to_map.reads.multiMap { _group, meta, reads, ref ->
-        reads: [meta, reads]
-        ref:   ref
-    }
-    SNIPPY_RUN(ch_snippy_reads.reads, ch_snippy_reads.ref)
+        SNIPPY_RUN(ch_snippy_reads.reads, ch_snippy_reads.ref)
 
-    ch_snippy_contigs = ch_to_map.contigs.multiMap { _group, meta, contigs, ref ->
-        contigs: [meta, contigs]
-        ref:     ref
-    }
-    SNIPPY_CONTIGS(ch_snippy_contigs.contigs, ch_snippy_contigs.ref)
-
-    // ---- one core alignment per group (reads and contigs can share a group)
-    ch_core_in = SNIPPY_RUN.out.vcf.mix(SNIPPY_CONTIGS.out.vcf)
-        .join(SNIPPY_RUN.out.aligned_fa.mix(SNIPPY_CONTIGS.out.aligned_fa))
-        .map { meta, vcf, aligned -> [meta.phylo_group, vcf, aligned] }
-        .groupTuple()
-        .combine(ch_refs, by: 0)
-        .multiMap { group, vcfs, aligned, ref ->
-            core: [[id: group], vcfs, aligned]
-            ref:  ref
+        ch_snippy_contigs = ch_to_map.contigs.multiMap { _group, meta, contigs, ref ->
+            contigs: [meta, contigs]
+            ref:     ref
         }
-    SNIPPY_CORE(ch_core_in.core, ch_core_in.ref)
-    SNIPPY_CLEAN(SNIPPY_CORE.out.full_aln)
+        SNIPPY_CONTIGS(ch_snippy_contigs.contigs, ch_snippy_contigs.ref)
+
+        // ---- one core alignment per group (reads and contigs can share a group)
+        ch_core_in = SNIPPY_RUN.out.vcf.mix(SNIPPY_CONTIGS.out.vcf)
+            .join(SNIPPY_RUN.out.aligned_fa.mix(SNIPPY_CONTIGS.out.aligned_fa))
+            .map { meta, vcf, aligned -> [meta.phylo_group, vcf, aligned] }
+            .groupTuple()
+            .combine(ch_refs, by: 0)
+            .multiMap { group, vcfs, aligned, ref ->
+                core: [[id: group], vcfs, aligned]
+                ref:  ref
+            }
+        SNIPPY_CORE(ch_core_in.core, ch_core_in.ref)
+        ch_full_aln      = SNIPPY_CORE.out.full_aln
+        ch_core_aln      = SNIPPY_CORE.out.aln
+    }
+    SNIPPY_CLEAN(ch_full_aln)
 
     // ---- groups big enough for a tree: alignment = reference + isolates >= 4 sequences
     ch_clean = SNIPPY_CLEAN.out.aln
@@ -170,10 +203,11 @@ workflow PHYLOGENY {
     SNPDISTS(ch_snps.mix(ch_clean.pair))
 
     emit:
-    core_aln      = SNIPPY_CORE.out.aln            // [ meta(group), aln ]
+    core_aln      = ch_core_aln                    // [ meta(group), aln ] (snippy only)
     gubbins_tree  = GUBBINS.out.tree
     tree          = IQTREE.out.phylogeny           // [ meta(group), treefile ]
     snp_distances = SNPDISTS.out.tsv               // [ meta(group), tsv ]
+    ska_distances = ch_ska_distances               // [ meta(group), tsv ] (ska2 only)
 }
 
 //

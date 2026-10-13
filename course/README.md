@@ -62,7 +62,7 @@ these shell variables, which you set up on Day 1:
 | `$READS` | Read files, named `<sample>_R1.fastq.gz`, `<sample>_R2.fastq.gz`, `<sample>_ont.fastq.gz` |
 | `$RESULTS` | Where you write your own results |
 | `$SHARED` | Read-only folder prepared by the trainers (data, databases, pre-computed results) |
-| `$THREADS` | CPU threads you may use (your trainer will tell you; usually 4) |
+| `$THREADS` | CPU threads each command may use: 1 in the interactive sessions (pipeline jobs get their own CPUs from Slurm) |
 | `$SITE_CONFIG` | The pipeline's site config for this server, e.g. `conf/slurm.config` (Days 5 and 10) |
 
 ---

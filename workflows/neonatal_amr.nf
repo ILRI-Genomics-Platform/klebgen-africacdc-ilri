@@ -6,6 +6,7 @@
 //   READ_QC     -> Module 1   (QC, contamination)
 //   ASSEMBLY    -> Module 2   (short-read, long-read and hybrid assembly)
 //   PROKKA      -> optional genome annotation (--run_prokka)
+//   BAKTA       -> optional genome annotation (--run_bakta --bakta_db <db>)
 //   TYPING_AMR  -> Modules 3, 4, 5, 7 (typing, AMR/virulence, plasmids, K/O)
 //   PHYLOGENY   -> Module 6   (recombination-aware trees, SNP distances)
 //   MULTIQC     -> Module 8   (summary report; integration in R is an exercise)
@@ -16,6 +17,7 @@ include { ASSEMBLY   } from '../subworkflows/local/assembly/main'
 include { TYPING_AMR } from '../subworkflows/local/typing_amr/main'
 include { PHYLOGENY  } from '../subworkflows/local/phylogeny/main'
 include { PROKKA     } from '../modules/nf-core/prokka/main'
+include { BAKTA_BAKTA } from '../modules/nf-core/bakta/bakta/main'
 include { MULTIQC    } from '../modules/nf-core/multiqc/main'
 
 workflow NEONATAL_AMR {
@@ -41,12 +43,17 @@ workflow NEONATAL_AMR {
         PROKKA(ASSEMBLY.out.assembly, [], [])
         ch_prokka_mqc = PROKKA.out.txt.map { _meta, txt -> txt }
     }
+    ch_bakta_mqc = channel.empty()
+    if (params.run_bakta) {
+        BAKTA_BAKTA(ASSEMBLY.out.assembly, file(params.bakta_db, checkIfExists: true), [], [], [], [])
+        ch_bakta_mqc = BAKTA_BAKTA.out.txt.map { _meta, txt -> txt }
+    }
 
     TYPING_AMR(ASSEMBLY.out.assembly, params.amrfinderplus_db, params.skip_kaptive)
 
     if (!params.skip_phylogeny) {
         PHYLOGENY(
-            // what Snippy maps to the reference: trimmed reads, or the given contigs (snippy --ctgs)
+            // what Snippy (or SKA2) compares: trimmed reads, or the given contigs
             READ_QC.out.short_reads.mix(ch_given_assemblies),
             ASSEMBLY.out.assembly,
             TYPING_AMR.out.kleborate,
@@ -54,7 +61,8 @@ workflow NEONATAL_AMR {
             params.phylo_reference_sheet,
             params.phylo_reference_dir,
             params.phylo_references,
-            params.phylo_min_group_size
+            params.phylo_min_group_size,
+            params.phylo_method
         )
     }
 
@@ -79,6 +87,7 @@ workflow NEONATAL_AMR {
     ch_multiqc_files = READ_QC.out.multiqc
         .mix(ASSEMBLY.out.multiqc)
         .mix(ch_prokka_mqc)
+        .mix(ch_bakta_mqc)
         .mix(ch_versions_yml)
         .collect()
     ch_multiqc_config = params.multiqc_config ? file(params.multiqc_config, checkIfExists: true) : []

@@ -36,7 +36,8 @@ workflow {
         // Shared read-only images: check the course-built images exist before starting
         if (workflow.containerEngine == 'singularity' && params.local_images) {
             def missing = params.local_images
-                .collect { process, image -> "${params.shared_container_dir}/local/${image}" }
+                .findAll { process, _image -> process != 'SKA2' || (params.phylo_method == 'ska2' && !params.skip_phylogeny) }
+                .collect { _process, image -> "${params.shared_container_dir}/local/${image}" }
                 .findAll { path -> !file(path).exists() }
             if (missing) {
                 error(
@@ -133,11 +134,16 @@ def helpMessage() {
       --phylo_references       samplesheet mode: CSV 'group,fasta';
                                default: each group's best own assembly [${params.phylo_references ?: 'not set'}]
       --phylo_min_group_size   Smallest group analysed (tree: 3+)      [${params.phylo_min_group_size}]
+      --phylo_method           snippy: map reads/contigs to the reference (Snippy)
+                               ska2: split k-mers (SKA2), placed on the same reference;
+                                     also reference-free SNP distances  [${params.phylo_method}]
 
     Typing and annotation:
       --skip_kaptive           No standalone Kaptive report (Kleborate
                                still reports K/O loci)                 [${params.skip_kaptive}]
       --run_prokka             Annotate every assembly with Prokka     [${params.run_prokka}]
+      --run_bakta              Annotate every assembly with Bakta      [${params.run_bakta}]
+      --bakta_db               Bakta database folder (version 6)       [${params.bakta_db ?: 'not set'}]
 
     Containers:
       --shared_container_dir   Read-only folder of prepared Singularity images

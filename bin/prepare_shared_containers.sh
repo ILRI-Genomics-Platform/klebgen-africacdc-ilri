@@ -18,7 +18,7 @@
 # What it does
 #   1. Asks Nextflow which container every process uses under -profile singularity with
 #      conf/singularity_images.config (nextflow inspect), so the list always matches the
-#      pipeline code and configuration.
+#      pipeline code and configuration. Optional steps (Prokka, Bakta, --phylo_method ska2) are included.
 #   2. nf-core module images (https://depot.galaxyproject.org/..., Seqera community images):
 #      downloads each into DIR/nf-core/ under the file name Nextflow looks for.
 #   3. Local module images (DIR/local/*.sif): builds each from its module's environment.yml,
@@ -67,10 +67,22 @@ echo "Image folder: $DIR"
 # 1. Which image does each process use?
 # ---------------------------------------------------------------------------------------------
 echo "Resolving containers with nextflow inspect (profile singularity + conf/singularity_images.config)..."
-( cd "$WORK" && nextflow -q inspect "$PIPELINE_DIR/main.nf" \
-      -profile test,singularity -c "$PIPELINE_DIR/conf/singularity_images.config" \
-      --shared_container_dir "$DIR" --run_prokka true -format json ) > "$WORK/inspect.json"
-# (--run_prokka true so that the optional Prokka image is prepared too)
+# Twice: once with the default phylogeny method (Snippy) and once with --phylo_method ska2, with the optional
+# annotation steps switched on, so that every image any run can need is prepared.
+for method in snippy ska2; do
+    ( cd "$WORK" && nextflow -q inspect "$PIPELINE_DIR/main.nf" \
+          -profile test,singularity -c "$PIPELINE_DIR/conf/singularity_images.config" \
+          --shared_container_dir "$DIR" --run_prokka true --run_bakta true --bakta_db "$WORK" \
+          --phylo_method "$method" -format json ) > "$WORK/inspect_$method.json"
+done
+python3 - "$WORK/inspect_snippy.json" "$WORK/inspect_ska2.json" > "$WORK/inspect.json" <<'MERGE'
+import json, sys
+procs = {}
+for path in sys.argv[1:]:
+    for p in json.load(open(path))["processes"]:
+        procs.setdefault(p["name"], p)
+print(json.dumps({"processes": list(procs.values())}))
+MERGE
 
 # Plan: one line per image -> kind <tab> source <tab> target file <tab> processes
 python3 - "$WORK/inspect.json" "$DIR" "$PIPELINE_DIR" > "$WORK/plan.tsv" <<'PY'

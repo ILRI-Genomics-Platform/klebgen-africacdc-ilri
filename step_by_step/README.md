@@ -14,7 +14,7 @@ the commands the pipeline's processes run. The results go into the same folder l
 **1. Get an interactive session on a compute node.** Do not run tools on the login node.
 
 ```bash
-srun -w compute05 --cpus-per-task=4 --mem=32G --time=08:00:00 --pty bash
+srun -w compute05 --cpus-per-task=1 --mem=32G --time=08:00:00 --pty bash      # 1 CPU per trainee
 cd /path/to/neonatal-amr-nf          # the pipeline folder
 module load singularity              # or apptainer; whatever `module avail` shows on your HPC
 ```
@@ -34,7 +34,7 @@ and the course's shared images, references and Kraken2 database:
 | `AMRFINDER_DB` | empty | AMRFinderPlus database; empty = download it in step 08 (needs internet) |
 | `MIN_GROUP` | 2 | Smallest species + ST group that gets a phylogeny |
 | `TOOL_MODE` | `singularity` | `singularity`: tools from the pipeline's images; `module`: tools on your `PATH` |
-| `THREADS`, `MEM_GB` | your Slurm allocation | CPUs and memory given to the tools |
+| `THREADS`, `MEM_GB` | your Slurm allocation (1 CPU in a course session) | CPUs and memory given to the tools |
 
 You can also set any of these for a single run without editing the file:
 `OUTDIR=$PWD/my_results bash step_by_step/01_fastp.sh`.
@@ -78,21 +78,23 @@ then run the remaining samples with `all`.
 Each script's header explains what the step does, which options it uses and why, what it writes, and what
 to look at in the results. Read it before you run the step: `less step_by_step/04_shovill.sh`.
 
-### What each step needs, and how long it takes (one isolate, 4 CPUs)
+### What each step needs, and how long it takes (one isolate, 1 CPU)
+
+Rough estimates for a course session with 1 CPU; with more CPUs most steps are faster.
 
 | Step | Needs | Time |
 |---|---|---|
-| 01 fastp | reads | 1-2 min |
-| 02 Kraken2/Bracken | step 01; ~80 GB RAM | 2-5 min (plus loading the database) |
-| 03 long-read QC | ONT reads (others are skipped) | 2-5 min |
-| 04 Shovill | step 01 | 15-30 min |
-| 05 hybrid assembly | steps 01 and 03; ONT reads | 1-3 h (eight assemblies) |
-| 06 QUAST | step 04 (and 05) | < 1 min |
-| 07 typing | an assembly | 2-5 min |
-| 08 AMRFinderPlus | an assembly; the database | 1-2 min |
-| 09 MOB-suite | an assembly | 2-5 min |
-| 10 Prokka | an assembly | 5-10 min |
-| 11 phylogeny | step 07 for all samples; reads or assemblies | 10-30 min per isolate, plus Gubbins and IQ-TREE |
+| 01 fastp | reads | 2-5 min |
+| 02 Kraken2/Bracken | step 01; ~80 GB RAM | 5-15 min (plus loading the database) |
+| 03 long-read QC | ONT reads (others are skipped) | 5-10 min |
+| 04 Shovill | step 01 | 45-90 min |
+| 05 hybrid assembly | steps 01 and 03; ONT reads | several hours (eight assemblies): use `run_all.sh` as a batch job, or the pre-computed assemblies |
+| 06 QUAST | step 04 (and 05) | 1-2 min |
+| 07 typing | an assembly | 5-10 min |
+| 08 AMRFinderPlus | an assembly; the database | 2-5 min |
+| 09 MOB-suite | an assembly | 5-10 min |
+| 10 Prokka | an assembly | 15-30 min |
+| 11 phylogeny | step 07 for all samples; reads or assemblies | 20-45 min per isolate (Snippy), plus Gubbins and IQ-TREE |
 | 12 MultiQC | any QC results | < 1 min |
 
 **Which assembly is used from step 06 on?** The same one as in the pipeline: the hybrid assembly (step 05)

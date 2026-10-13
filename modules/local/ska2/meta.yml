@@ -1,0 +1,69 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/nf-core/modules/master/modules/meta-schema.json
+name: ska2
+description: >
+  Split k-mer analysis (SKA2) of one group of closely related isolates: a reference-length alignment
+  (ska map, with the reference added) for Gubbins and IQ-TREE, and reference-free pairwise SNP distances
+  (ska distance)
+keywords:
+  - ska2
+  - split k-mers
+  - snp
+  - alignment
+  - transmission
+tools:
+  - ska2:
+      description: Split k-mer analysis, version 2
+      homepage: https://github.com/bacpop/ska.rust
+      documentation: https://docs.rs/ska/latest/ska/
+      doi: 10.1101/gr.279449.124
+      licence:
+        - Apache-2.0
+input:
+  - - meta:
+        type: map
+        description: Groovy Map for the group, e.g. [ id:'Kpneumoniae_ST39' ]
+    - ids:
+        type: list
+        description: Isolate names, in the order of their files
+    - nfiles:
+        type: list
+        description: Number of files per isolate (2 for paired reads, 1 for contigs)
+    - seqs:
+        type: file
+        description: Trimmed reads (FASTQ) and/or contigs (FASTA), in the order of ids
+        pattern: '*.{fastq.gz,fq.gz,fa,fasta,fna}'
+  - reference:
+      type: file
+      description: Reference genome of the group (FASTA)
+      pattern: '*.{fa,fasta,fna}'
+output:
+  full_aln:
+    - - meta:
+          type: map
+          description: Groovy Map for the group
+      - '*.full.aln':
+          type: file
+          description: Reference-length alignment, reference first (same layout as snippy-core's full.aln)
+  distances:
+    - - meta:
+          type: map
+          description: Groovy Map for the group
+      - '*.ska_distances.tsv':
+          type: file
+          description: Reference-free pairwise SNP distances (Sample1, Sample2, Distance, Mismatches)
+  skf:
+    - - meta:
+          type: map
+          description: Groovy Map for the group
+      - '*.skf':
+          type: file
+          description: Split k-mer file of the group
+  inputs:
+    - - meta:
+          type: map
+          description: Groovy Map for the group
+      - '*.ska_inputs.tsv':
+          type: file
+          description: The isolate-to-file list given to ska build
+authors:
+  - "@ajodeh-juma"

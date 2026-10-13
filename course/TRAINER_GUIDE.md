@@ -177,13 +177,13 @@ adds it to every participant's `~/.bashrc`, and each session switches a group of
 | `medaka` | Medaka | pipeline image |
 | `typing` | Kleborate (with Kaptive), ECTyper, EzClermont | pipeline images |
 | `amr` | AMRFinderPlus | pipeline image |
-| `plasmids` | MOB-suite (with Mash), Bakta | pipeline image; Bakta: course image |
-| `phylo` | Snippy (with snp-sites), Gubbins, snp-dists, IQ-TREE, seqkit | pipeline images; seqkit: course image |
+| `plasmids` | MOB-suite (with Mash), Bakta | pipeline images (Bakta: the pipeline's `--run_bakta` image) |
+| `phylo` | Snippy (with snp-sites), SKA2, Gubbins, snp-dists, IQ-TREE, seqkit | pipeline images (SKA2: the `--phylo_method ska2` image); seqkit: course image |
 | `r` | R | module `R/4.5`; packages in each participant's own library |
 | `nextflow` | Nextflow | module `nextflow/25.04` |
 
-**Course-only images.** Five tools are used in the sessions but not by the pipeline: seqkit 2.8.2, FastQC
-0.12.1, CheckM2 1.0.2, Bandage 0.8.1 and Bakta 1.9.4 (`course/envs/<tool>/environment.yml`).
+**Course-only images.** Four tools are used in the sessions but not by the pipeline: seqkit 2.8.2, FastQC
+0.12.1, CheckM2 1.0.2 and Bandage 0.8.1 (`course/envs/<tool>/environment.yml`).
 `bin/prepare_shared_containers.sh` (section 7) builds them into `$SHARED/containers/course/` with the pipeline's
 images, and lists them in `MANIFEST.tsv`, where `use_tools` finds them. Check that everything is in place:
 
@@ -192,8 +192,8 @@ bin/prepare_shared_containers.sh --check          # every image, pipeline and co
 source course/tools.sh && list_tools              # as a participant: every tool and its image
 ```
 
-Keep the CheckM2 and Bakta databases in step with these versions: CheckM2 1.0.2 reads
-`uniref100.KO.1.dmnd`; Bakta 1.9.4 needs a database of version 5.x (`db-light` is enough).
+Keep the databases in step with these versions: CheckM2 1.0.2 reads `uniref100.KO.1.dmnd`; Bakta 1.12 (the
+pipeline's) needs a version 6 database: download it with Bakta 1.10 or later (`db-light` is enough).
 
 **Modules instead of images.** If your HPC provides the tools as modules, participants set
 `export TOOL_MODE=module` in `~/.bashrc` (Day 1, section 0.1) and `use_tools <group>` runs `module load` for
@@ -225,14 +225,14 @@ but not change. Nothing is downloaded or built during the course.
 | `conf/local.config` | One shared server, no scheduler | `shared_container_dir`; `resourceLimits` per run |
 
 Both include `conf/singularity_images.config`, which points Nextflow at the read-only image folder and names the
-four course-built images. Participants set `SITE_CONFIG` to the one you choose in their Day 1 setup (it defaults
+course-built images (`containers/local/`). Participants set `SITE_CONFIG` to the one you choose in their Day 1 setup (it defaults
 to `conf/slurm.config`).
 
 | Folder | Images | Where they come from |
 | --- | --- | --- |
-| `containers/nf-core/` | 17, for the 20 nf-core module processes | Downloaded from the nf-core / BioContainers and Seqera image stores, named as Nextflow expects |
-| `containers/local/` | 4: Kleborate 3.2.4; Autocycler + Flye + Raven; Polypolish + BWA; EzClermont | Built from each local module's `environment.yml` |
-| `containers/course/` | 5: seqkit, FastQC, CheckM2, Bandage, Bakta | Hands-on sessions only (section 6); built from `course/envs/<tool>/environment.yml` |
+| `containers/nf-core/` | 18, for the 21 nf-core module processes (with Bakta) | Downloaded from the nf-core / BioContainers and Seqera image stores, named as Nextflow expects |
+| `containers/local/` | 5: Kleborate 3.2.4; Autocycler + Flye + Raven; Polypolish + BWA; EzClermont; SKA2 0.5.1 | Built from each local module's `environment.yml` |
+| `containers/course/` | 4: seqkit, FastQC, CheckM2, Bandage | Hands-on sessions only (section 6); built from `course/envs/<tool>/environment.yml` |
 
 ### 7.1 Prepare the images (once, as the trainer who will own them)
 
@@ -281,7 +281,8 @@ After locking:
 - Folders are `0550` (with a group) or `0555`; image files `0440` or `0444`. **Nobody has write permission**,
   including the owner, so an image cannot be deleted or overwritten by accident.
 - The pipeline is configured never to download: `singularity.libraryDir` and `singularity.cacheDir` both point
-  at the read-only folder. Before a run starts, the pipeline checks that the four course-built images exist; a
+  at the read-only folder. Before a run starts, the pipeline checks that the course-built images it will use exist (SKA2's only with
+  `--phylo_method ska2`); a
   missing image of either kind stops the run with a message telling the participant to ask a trainer.
 - Participants can check the folder themselves with `--check`; any other use of the script stops with
   "Only its owner (a trainer) can add or update images".

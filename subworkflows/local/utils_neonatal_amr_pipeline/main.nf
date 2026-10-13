@@ -40,10 +40,21 @@ workflow PIPELINE_INITIALISATION {
             "groups of 3 or more also get a recombination-filtered tree")
     }
 
+    if (params.run_bakta) {
+        if (!params.bakta_db) {
+            error("--run_bakta needs --bakta_db: a Bakta database folder (version 6). Download one with\n" +
+                "  bakta_db download --output <folder> --type light")
+        }
+        file(params.bakta_db, checkIfExists: true)
+    }
+
     // Phylogeny references: every reference genome in the sheet must already be downloaded
     if (!params.skip_phylogeny) {
         if (!(params.phylo_grouping in ['kleborate', 'samplesheet'])) {
             error("--phylo_grouping must be 'kleborate' or 'samplesheet' (got '${params.phylo_grouping}')")
+        }
+        if (!(params.phylo_method in ['snippy', 'ska2'])) {
+            error("--phylo_method must be 'snippy' or 'ska2' (got '${params.phylo_method}')")
         }
         if (params.phylo_grouping == 'kleborate') {
             def missingRefs = readReferenceSheet(params.phylo_reference_sheet)

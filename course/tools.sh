@@ -10,7 +10,7 @@
 #     use_tools typing      # Kleborate, Kaptive, ECTyper, EzClermont
 #     use_tools amr         # AMRFinderPlus
 #     use_tools plasmids    # MOB-suite, Mash, Bakta
-#     use_tools phylo       # Snippy, Gubbins, snp-sites, snp-dists, IQ-TREE, seqkit
+#     use_tools phylo       # Snippy, SKA2, Gubbins, snp-sites, snp-dists, IQ-TREE, seqkit
 #     use_tools r           # R (module) with your own package library
 #     use_tools nextflow    # Nextflow (module)
 #     list_tools            # every group, its tools and where each comes from
@@ -40,7 +40,7 @@ declare -gA GROUP_TOOLS=(
     [typing]="kleborate kaptive ectyper ezclermont"
     [amr]="amrfinder amrfinder_update"
     [plasmids]="mob_recon mob_typer mash bakta"
-    [phylo]="snippy snippy-core snippy-clean_full_aln run_gubbins.py snp-sites snp-dists iqtree seqkit"
+    [phylo]="snippy snippy-core snippy-clean_full_aln ska run_gubbins.py snp-sites snp-dists iqtree seqkit"
 )
 
 # Which image each command runs in: the pipeline process that uses it (looked up in MANIFEST.tsv),
@@ -54,9 +54,8 @@ declare -gA TOOL_IMAGE=(
     [amrfinder]=AMRFINDERPLUS_RUN [amrfinder_update]=AMRFINDERPLUS_RUN
     [mob_recon]=MOBSUITE_RECON [mob_typer]=MOBSUITE_RECON [mash]=MOBSUITE_RECON
     [snippy]=SNIPPY_RUN [snippy-core]=SNIPPY_RUN [snippy-clean_full_aln]=SNIPPY_RUN [snp-sites]=SNIPPY_RUN
-    [run_gubbins.py]=GUBBINS [snp-dists]=SNPDISTS [iqtree]=IQTREE
+    [run_gubbins.py]=GUBBINS [snp-dists]=SNPDISTS [iqtree]=IQTREE [ska]=SKA2 [bakta]=BAKTA_BAKTA
     [seqkit]=COURSE_SEQKIT [fastqc]=COURSE_FASTQC [checkm2]=COURSE_CHECKM2 [Bandage]=COURSE_BANDAGE
-    [bakta]=COURSE_BAKTA
 )
 
 # TOOL_MODE=module: the modules each group loads. Trainer: change these to the names on your HPC
@@ -67,8 +66,8 @@ declare -gA GROUP_MODULES=(
     [medaka]="medaka/2.2.2"
     [typing]="kleborate/3.2.4 ectyper/1.0.0 ezclermont/1.0.0"
     [amr]="amrfinderplus/4.2.7"
-    [plasmids]="mob_suite/3.1.9 mash/2.3 bakta/1.9.4"
-    [phylo]="snippy/4.6.0 gubbins/3.3.5 snp-sites/2.5.1 snp-dists/0.8.2 iqtree/3.1.3 seqkit/2.8.2"
+    [plasmids]="mob_suite/3.1.9 mash/2.3 bakta/1.12.0"
+    [phylo]="snippy/4.6.0 ska2/0.5.1 gubbins/3.3.5 snp-sites/2.5.1 snp-dists/0.8.2 iqtree/3.1.3 seqkit/2.8.2"
 )
 
 # Processes that share another process's image (an older MANIFEST.tsv may list only the first)

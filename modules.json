@@ -19,6 +19,13 @@
                             "modules"
                         ]
                     },
+                    "bakta/bakta": {
+                        "branch": "master",
+                        "git_sha": "c8cb89b6a5514af8d813dcf26166628bf64799e3",
+                        "installed_by": [
+                            "modules"
+                        ]
+                    },
                     "bracken/bracken": {
                         "branch": "master",
                         "git_sha": "c8cb89b6a5514af8d813dcf26166628bf64799e3",

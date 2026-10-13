@@ -29,10 +29,15 @@ export NEONATAL_R_NO_INSTALL=1        # do not try to download packages during t
 # For genomes given as assemblies, use the metadata written by bin/make_assembly_samplesheet.py
 # (metadata_assemblies.tsv: sample, collection_year, collection_date, ward, ...).
 PIPELINE_DIR="${SLURM_SUBMIT_DIR:-$PWD}"
-RESULTS="/var/scratch/global/${USER}/neonatal-amr/outdir"
-METADATA="${PIPELINE_DIR}/training_data/metadata_compact.tsv"
-AST="${PIPELINE_DIR}/training_data/ast_compact.tsv"   # leave empty ("") if there is no AST table
-OUTDIR="${RESULTS}/plots"
+# RESULTS="/var/scratch/global/${USER}/neonatal-amr/outdir"
+# METADATA="${PIPELINE_DIR}/training_data/metadata_compact.tsv"
+# AST="${PIPELINE_DIR}/training_data/ast_compact.tsv"   # leave empty ("") if there is no AST table
+
+RESULTS="/var/scratch/global/${USER}/neonatal-amr/outdir_ethiopia_kpneumoniae"
+METADATA="${HOME}/trainings/africacdc-pgi-klebgen/results/Ethiopia/metadata_assemblies_kpneumoniae.tsv"                 
+AST=""                                                                          
+
+OUTDIR="${RESULTS}/plots_ethiopia_kpneumoniae"
 RUN_BACTDATING=false                  # true: one BactDating run per Gubbins group (slow: minutes to hours)
 MRCA=""                               # e.g. "CAA65Z,CAA99X": date these isolates' common ancestor
 

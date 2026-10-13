@@ -30,8 +30,9 @@ MIN_GROUP="${MIN_GROUP:-2}"             # phylogeny: smallest group (species + S
 TOOL_MODE="${TOOL_MODE:-singularity}"
 BINDS="${BINDS:-/var/scratch,/export/data,${HOME}}"   # folders the containers must see (only existing ones are used)
 
-# Resources: taken from the Slurm allocation when there is one
-THREADS="${THREADS:-${SLURM_CPUS_PER_TASK:-4}}"
+# Resources: the Slurm allocation when there is one (1 CPU in a course session; run_all.sh as a batch job gets 8),
+# otherwise $THREADS (1 in the course's ~/.bashrc)
+THREADS="${SLURM_CPUS_PER_TASK:-${THREADS:-1}}"
 MEM_GB="${MEM_GB:-$(( ${SLURM_MEM_PER_NODE:-16384} / 1024 ))}"
 # ======================================================================================
 

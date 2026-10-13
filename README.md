@@ -58,6 +58,7 @@ neonatal-amr-nf/
 | Short-read polishing | `pypolca/run` | nf-core | 0.4.0 |
 | Assembly QC | `quast` | nf-core | 5.3.0 |
 | Annotation (optional, `--run_prokka`) | `prokka` | nf-core | 1.15.6 |
+| Annotation (optional, `--run_bakta`) | `bakta/bakta` | nf-core | 1.12.0 (database version 6) |
 | Typing, AMR, virulence, K/O | `kleborate` | **local** | 3.2.4 |
 | K/O loci, full report and locus sequences | `kaptive` | **local** | Kaptive installed with Kleborate 3.2.4 |
 | AMR genes and mutations | `amrfinderplus/update`, `amrfinderplus/run` | nf-core | 4.2.7 |
@@ -65,6 +66,7 @@ neonatal-amr-nf/
 | *E. coli* serotype | `ectyper` | nf-core | 1.0.0 |
 | *E. coli* phylogroup | `ezclermont` | **local** | 1.0.0 |
 | Core SNPs | `snippy/run`, `snippy/core` | nf-core | 4.6.0 |
+| Core SNPs (`--phylo_method ska2`) | `ska2` | **local** | SKA2 0.5.1 |
 | Alignment cleaning | `snippy/clean` | **local** | snippy 4.6.0 |
 | Recombination | `gubbins` | nf-core | 3.3.5 |
 | Tree | `iqtree` | nf-core | 3.1.3 |
@@ -79,6 +81,7 @@ Why the local modules exist:
 - **ezclermont**: no nf-core module exists for Clermont phylotyping.
 - **kaptive**: no nf-core module exists. Kleborate already runs Kaptive and reports the K and O loci; this step adds Kaptive's full gene-level report and the locus sequences, for isolates Kleborate places in the *K. pneumoniae* species complex. It uses Kleborate's environment, so both report the same Kaptive version and databases.
 - **snippy/contigs**: nf-core's `snippy/run` takes reads only; this runs `snippy --ctgs` for genomes given as assemblies.
+- **ska2**: nf-core's `ska` modules run the older SKA (v1). This one runs SKA2 for a whole group in one process (`ska build`, `ska map`, `ska distance`), so that its alignment feeds the same Gubbins / IQ-TREE / snp-dists steps as Snippy's.
 - **snippy/clean**: runs `snippy-clean_full_aln` and names the alignment after the phylogeny group, because the nf-core `gubbins` module has no `meta` map.
 
 Local modules pin conda packages in `environment.yml` but do not pin a container image. Use `-profile conda` or
@@ -176,6 +179,19 @@ bin/fetch_references.py --group amr-course     # into --phylo_reference_dir; --c
 Groups smaller than `--phylo_min_group_size` (default 3) are skipped. A tree needs at least 3 isolates (with the
 reference, 4 sequences); with `--phylo_min_group_size 2`, a pair gets SNP distances only (no Gubbins, no tree).
 
+### Snippy or SKA2 (`--phylo_method`)
+
+| `--phylo_method` | How SNPs are found | Extra output |
+| --- | --- | --- |
+| `snippy` (default) | Each isolate's reads (or contigs) are mapped to the group's reference and SNPs are called | |
+| `ska2` | [SKA2](https://github.com/bacpop/ska.rust) splits every isolate's reads or contigs into split k-mers (31 bp around each base) and compares them across the group, without mapping. `ska map` then places them on the same reference | `<group>.ska_distances.tsv`: reference-free SNP distances |
+
+Both give `<group>.full.aln` with the same layout, so Gubbins, IQ-TREE and snp-dists run the same way after
+either. SKA2 is fast, needs little memory, and its distances do not depend on the choice of reference: for
+closely related isolates (one ST, an outbreak) it uses sequence the reference lacks. It misses SNPs that lie
+within about 15 bp of another variant, and indels, so for diverse groups Snippy is the safer choice.
+Derelle *et al.* 2024, *Genome Research* 34:1661, [doi:10.1101/gr.279449.124](https://doi.org/10.1101/gr.279449.124).
+
 ## Learning the steps first: `step_by_step/`
 
 Before running the pipeline, trainees can run the same commands themselves, one step at a time:
@@ -250,21 +266,24 @@ section 7.
 | `--phylo_reference_sheet` | `conf/phylo_references.csv` | Reference genome per species / ST (kleborate mode) |
 | `--phylo_reference_dir` | `references/` (site configs: shared folder) | Folder with `<accession>.fasta`, filled by `bin/fetch_references.py` |
 | `--phylo_references` | none | Samplesheet mode: CSV `group,fasta`; by default each group's own best assembly (hybrid first, then fewest contigs) |
+| `--phylo_method` | `snippy` | `snippy` (map to the reference) or `ska2` (split k-mers; also reference-free SNP distances) |
 | `--phylo_min_group_size` | 3 | Smallest group analysed (2 or more). Groups of 3+ get Gubbins, a tree and SNP distances; a group of 2 gets SNP distances only |
 | `--skip_phylogeny` | false | Skip Module 6 |
 | `--skip_kaptive` | false | No standalone Kaptive report (Kleborate's K/O columns remain) |
 | `--run_prokka` | false | Annotate every assembly with Prokka (results in `02_assembly/prokka/`, summary in MultiQC) |
+| `--run_bakta` | false | Annotate every assembly with Bakta (results in `02_assembly/bakta/<sample>/`, summary in MultiQC); needs `--bakta_db` |
+| `--bakta_db` | none | Bakta database folder, version 6 (`bakta_db download --output <folder> --type light`; the light database is enough) |
 
 ## Outputs
 
 ```text
 results/
 ├── 01_qc/            fastp, filtlong, nanoplot, kraken2, bracken
-├── 02_assembly/      shovill, autocycler, hybrid, quast, prokka (with --run_prokka)
+├── 02_assembly/      shovill, autocycler, hybrid, quast, prokka (--run_prokka), bakta (--run_bakta)
 ├── 03_typing/        kleborate, kaptive (K and O reports, locus FASTA), ectyper, ezclermont
 ├── 04_amr/           amrfinderplus
 ├── 05_plasmids/      mobsuite
-├── 06_phylogeny/     <group>/ (core alignment, tree, SNP distances, snippy), gubbins/; group e.g. Kpneumoniae_ST39
+├── 06_phylogeny/     <group>/ (core alignment, tree, SNP distances, snippy or SKA2), gubbins/; group e.g. Kpneumoniae_ST39
 ├── multiqc/          multiqc_report.html
 └── pipeline_info/    software versions, execution report, timeline, trace
 ```
