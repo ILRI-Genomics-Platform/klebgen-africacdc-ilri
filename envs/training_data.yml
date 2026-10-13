@@ -1,0 +1,17 @@
+# Python for preparing the training data: bin/select_training_set.py (reads the study's Excel tables,
+# needs pandas + openpyxl) and bin/fetch_ena.py (standard library only).
+# Versions are those the training tables in training_data/ were checked with.
+#
+#   conda env create -f envs/training_data.yml        # once (mamba env create ... also works)
+#   conda activate training-data
+#   for size in compact capstone full; do
+#       python3 bin/select_training_set.py assets/13073_2024_1342_MOESM2_ESM.xlsx training_data --size $size
+#   done
+#   conda deactivate
+name: training-data
+channels:
+  - conda-forge
+dependencies:
+  - python=3.13
+  - pandas=3.0
+  - openpyxl=3.1

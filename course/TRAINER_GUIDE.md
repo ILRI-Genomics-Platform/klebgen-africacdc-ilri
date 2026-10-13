@@ -95,14 +95,19 @@ folders above it. If your scratch folder is reset by HPC policy (`chmod 700`) or
 ## 4. Training data
 
 The training sets are already in `training_data/`. To regenerate them from the study's supplementary spreadsheet
-(`13073_2024_1342_MOESM2_ESM.xlsx` from [the paper](https://doi.org/10.1186/s13073-024-01342-3)):
+(`assets/13073_2024_1342_MOESM2_ESM.xlsx`, from [the paper](https://doi.org/10.1186/s13073-024-01342-3)), use the
+`training-data` conda environment (Python with pandas and openpyxl; `bin/fetch_ena.py` below runs in it too):
 
 ```bash
 cd $SHARED/neonatal-amr-nf
+conda env create -f envs/training_data.yml        # once
+conda activate training-data
 for size in compact capstone full; do
-    python3 bin/select_training_set.py 13073_2024_1342_MOESM2_ESM.xlsx training_data --size $size
+    python3 bin/select_training_set.py assets/13073_2024_1342_MOESM2_ESM.xlsx training_data --size $size
 done
 ```
+
+The selection is deterministic: the same spreadsheet always gives the same isolates and tables.
 
 | Set | Isolates | Used for |
 | --- | --- | --- |

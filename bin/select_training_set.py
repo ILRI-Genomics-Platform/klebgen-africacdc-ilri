@@ -4,8 +4,10 @@ select_training_set.py - choose a training set from the supplementary tables
 of Heinz et al., Genome Medicine 2024 (doi:10.1186/s13073-024-01342-3;
 Blantyre, Malawi, 1998-2020).
 
-Usage
-  python3 select_training_set.py MOESM2_ESM.xlsx OUT_DIR [--size full|compact]
+Usage (from the pipeline folder; the spreadsheet is in assets/)
+  python3 bin/select_training_set.py assets/13073_2024_1342_MOESM2_ESM.xlsx training_data --size compact
+
+  Needs pandas and openpyxl:  conda env create -f envs/training_data.yml && conda activate training-data
 
   --size full     65 isolates: three candidate transmission clusters
   --size compact  29 isolates: two clusters, fewer diversity examples
@@ -37,6 +39,8 @@ Rules (deterministic: same input -> same selection)
 """
 
 import argparse
+import os
+
 import pandas as pd
 
 # How many isolates each group gets, per size. Compact counts are always <=
@@ -214,10 +218,11 @@ def write(s1, ast, picked, out_dir, size):
 
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("xlsx", help="13073_2024_1342_MOESM2_ESM.xlsx")
+    ap.add_argument("xlsx", help="the study's supplementary tables: assets/13073_2024_1342_MOESM2_ESM.xlsx")
     ap.add_argument("out_dir", nargs="?", default=".")
     ap.add_argument("--size", choices=sorted(SIZES) + ["capstone"], default="full")
     args = ap.parse_args()
+    os.makedirs(args.out_dir, exist_ok=True)
     s1, s6, ast = load(args.xlsx)
     if args.size == "capstone":
         full = select(s1, s6, SIZES["full"])

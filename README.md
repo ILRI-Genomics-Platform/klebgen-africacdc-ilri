@@ -209,7 +209,8 @@ bash step_by_step/01_fastp.sh CHI11E
 ```bash
 # 1. Choose isolates from the Genome Medicine 2024 supplementary tables, or use training_data/
 #    (--size compact = 29, capstone = 36 unseen, full = 65; also writes metadata, AST and K/O tables)
-python3 bin/select_training_set.py 13073_2024_1342_MOESM2_ESM.xlsx training_data --size compact
+#    (needs pandas and openpyxl: conda env create -f envs/training_data.yml && conda activate training-data)
+python3 bin/select_training_set.py assets/13073_2024_1342_MOESM2_ESM.xlsx training_data --size compact
 
 # 2. Download them from ENA and write the samplesheet (MD5-checked; try --dry-run first)
 python3 bin/fetch_ena.py fetch training_data/accessions_training_compact.tsv -d data -o samplesheet.csv
