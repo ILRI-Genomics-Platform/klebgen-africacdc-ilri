@@ -85,12 +85,23 @@ _tools_module() {   # module load, quietly tolerating module scripts that use un
 }
 
 _tools_singularity() {
-    if [ -z "${_TOOLS_SIF_BIN:-}" ]; then
-        [ -n "${SINGULARITY_MODULE}" ] && ! command -v singularity >/dev/null 2>&1 && _tools_module "${SINGULARITY_MODULE}"
-        _TOOLS_SIF_BIN=$(command -v singularity || command -v apptainer || true)
-        [ -n "${_TOOLS_SIF_BIN}" ] || { _tools_msg "ERROR: singularity/apptainer not found: load its module (SINGULARITY_MODULE) or use TOOL_MODE=module"; return 1; }
-        export _TOOLS_SIF_BIN
+    # The path is checked on every machine: a path found on the login node (exported into an interactive
+    # session) may not exist on the compute node.
+    if [ -n "${_TOOLS_SIF_BIN:-}" ] && [ -x "${_TOOLS_SIF_BIN}" ]; then return 0; fi
+    _TOOLS_SIF_BIN=$(command -v singularity || command -v apptainer || true)
+    if [ -z "${_TOOLS_SIF_BIN}" ]; then
+        local m
+        for m in ${SINGULARITY_MODULE} singularity apptainer; do
+            _tools_module "$m" >/dev/null 2>&1 || continue
+            _TOOLS_SIF_BIN=$(command -v singularity || command -v apptainer || true)
+            [ -n "${_TOOLS_SIF_BIN}" ] && break
+        done
     fi
+    if [ -z "${_TOOLS_SIF_BIN}" ]; then
+        _tools_msg "ERROR: singularity/apptainer not found on $(hostname): load its module (set SINGULARITY_MODULE) or use TOOL_MODE=module"
+        return 1
+    fi
+    export _TOOLS_SIF_BIN
 }
 
 _tools_image() {    # _tools_image PROCESS -> image path (cached per shell)
