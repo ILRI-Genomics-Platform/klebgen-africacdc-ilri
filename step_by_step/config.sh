@@ -102,8 +102,11 @@ in_tool_env() {
         [ -n "${SINGULARITY_BIN}" ] || fail "singularity/apptainer not found; load its module or use TOOL_MODE=module"
         local image; image=$(image_for "$process") || exit 1
         [ -r "$image" ] || fail "image not found: $image"
+        # LC_ALL=C: the images have no en_US.UTF-8 locale, so Perl tools (Prokka, Snippy, ...) would warn
+        # "Setting locale failed" with the host's LANG. (A "complete: unsupported builtin" line from some
+        # images' own start-up script is harmless.)
         # shellcheck disable=SC2046
-        "${SINGULARITY_BIN}" exec $(bind_opts) "$image" "$@"
+        LC_ALL=C "${SINGULARITY_BIN}" exec $(bind_opts) "$image" "$@"
     else
         "$@"
     fi

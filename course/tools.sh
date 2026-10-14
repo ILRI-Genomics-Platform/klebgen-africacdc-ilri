@@ -146,6 +146,9 @@ _tools_exec() {
             fi
             export SINGULARITYENV_XDG_RUNTIME_DIR="$XDG_RUNTIME_DIR" APPTAINERENV_XDG_RUNTIME_DIR="$XDG_RUNTIME_DIR"
         fi
+        # The images have no en_US.UTF-8 locale: without this, Perl tools (Prokka, Snippy, ...) warn
+        # "Setting locale failed". (A "complete: unsupported builtin" line from some images is harmless.)
+        export LC_ALL=C
         exec "${_TOOLS_SIF_BIN}" exec ${binds} "$image" "$tool" "$@"
     )
 }
