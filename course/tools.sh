@@ -131,12 +131,16 @@ _tools_exec() {
     image=$(_tools_image "$process") || return 127
     IFS=',' read -ra dirs <<< "${TOOL_BINDS}"
     for d in "${dirs[@]}"; do [ -d "$d" ] && binds="${binds} -B ${d}"; done
-    if [ "$tool" = Bandage ]; then        # Bandage draws images without a display
-        SINGULARITYENV_QT_QPA_PLATFORM=offscreen APPTAINERENV_QT_QPA_PLATFORM=offscreen \
-            "${_TOOLS_SIF_BIN}" exec ${binds} "$image" "$tool" "$@"
-    else
-        "${_TOOLS_SIF_BIN}" exec ${binds} "$image" "$tool" "$@"
-    fi
+    (
+        # The wrapper functions (fastp, medaka, ...) are exported so that they also work in child shells.
+        # Keep them out of the container: there, a tool's own bash scripts (medaka_consensus calls 'medaka')
+        # would run the wrapper instead of the tool. Only this subshell is changed, not your shell.
+        while read -r _ _ f; do export -fn "$f" 2>/dev/null; done < <(declare -Fx)
+        if [ "$tool" = Bandage ]; then        # Bandage draws images without a display
+            export SINGULARITYENV_QT_QPA_PLATFORM=offscreen APPTAINERENV_QT_QPA_PLATFORM=offscreen
+        fi
+        exec "${_TOOLS_SIF_BIN}" exec ${binds} "$image" "$tool" "$@"
+    )
 }
 export -f _tools_msg _tools_module _tools_singularity _tools_image _tools_exec 2>/dev/null
 
