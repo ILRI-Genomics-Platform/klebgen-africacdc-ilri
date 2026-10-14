@@ -165,12 +165,19 @@ flowchart TD
     BEST --> TY["Modules 3, 7<br/>Kleborate, Kaptive"]
     BEST --> AMR["Module 4<br/>AMRFinderPlus"]
     BEST --> PL["Module 5<br/>MOB-suite"]
-    QC --> PH["Module 6<br/>Snippy, Gubbins, IQ-TREE"]
+    BEST -.-> ANN["Module 5 (optional)<br/>Prokka, Bakta"]
+    TY -- "species + ST groups" --> PH
+    QC --> PH["Module 6<br/>Snippy and/or SKA2<br/>Gubbins, IQ-TREE, snp-dists"]
+    PH -. "both methods" .-> CMP["Module 6<br/>Snippy vs SKA2<br/>compare_snp_methods.py"]
     TY --> REP["Module 8<br/>R, Microreact, report"]
     AMR --> REP
     PL --> REP
     PH --> REP
 ```
+
+Dashed arrows are optional steps: genome annotation (`--run_prokka`, `--run_bakta`), and the comparison of
+the two SNP methods when the pipeline runs with `--phylo_method both` (Day 6). The phylogeny uses the
+trimmed reads (or the assemblies), grouped by the species and ST that Kleborate reports.
 
 ---
 

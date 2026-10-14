@@ -5,7 +5,8 @@
 #
 #   mkdir -p logs && sbatch step_by_step/run_all.sh          # as a Slurm job
 #   bash step_by_step/run_all.sh                             # in an interactive session
-#   SKIP="05 10" bash step_by_step/run_all.sh                # leave out steps (05 hybrid is the slowest)
+#   SKIP="05 10 10b" bash step_by_step/run_all.sh            # leave out steps (05 hybrid is the slowest)
+#   SKIP=05 PHYLO_METHOD=both bash step_by_step/run_all.sh   # with Prokka and Bakta; Snippy and SKA2 in step 11
 #
 #SBATCH --job-name=amr-steps
 #SBATCH --partition=batch
@@ -18,13 +19,14 @@
 set -euo pipefail
 HERE=$(cd "$(dirname "$0")" && pwd)
 [ -f "$HERE/config.sh" ] || HERE="${SLURM_SUBMIT_DIR:-$PWD}/step_by_step"   # sbatch runs a copy of the script
-SKIP=" ${SKIP:-10} "          # Prokka (10) is optional, as in the pipeline
+SKIP=" ${SKIP:-10 10b} "      # Prokka (10) and Bakta (10b) are optional, as in the pipeline
 
 source "$HERE/config.sh"
 reads=$(is_assembly_sheet && echo no || echo yes)
 
-for script in "$HERE"/[0-9][0-9]_*.sh; do
-    n=$(basename "$script" | cut -c1-2)
+# 00_, 01_, ... 10_, 10b_, 11_, 12_ in that order
+for script in $(printf '%s\n' "$HERE"/[0-9][0-9]*_*.sh | LC_ALL=C sort); do
+    n=$(basename "$script" | cut -d_ -f1)
     [[ "$SKIP" == *" $n "* ]] && { info "step $n skipped"; continue; }
     [ "$reads" = no ] && [[ " 01 02 03 04 05 " == *" $n "* ]] && continue    # assemblies: no read steps
     case "$n" in

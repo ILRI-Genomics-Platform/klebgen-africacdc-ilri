@@ -2,8 +2,14 @@
 // PHYLOGENY (Module 6): one recombination-aware phylogeny and SNP-distance
 // matrix per group of related isolates, for transmission analysis.
 //
-//   reads --snippy--> core alignment --clean--> Gubbins --> IQ-TREE
-//                                                     \--> snp-dists
+//   Kleborate species + ST --> one group per ST, each with a reference genome
+//
+//   reads (or contigs) of the group's isolates
+//      |-- snippy: snippy per isolate (--ctgs for contigs) --> snippy-core  --> <group>.full.aln
+//      `-- ska2:   ska build (whole group) --> ska map onto the reference  --> <group>.full.aln
+//                    `--> ska distance: reference-free SNP distances           (<group>_ska2 with 'both')
+//   each full alignment --clean--> Gubbins (3+ isolates) --> IQ-TREE
+//                                          `--> snp-dists
 //
 // Method (--phylo_method):
 //   snippy (default) map each isolate's reads (or contigs: snippy --ctgs) to the reference; snippy-core

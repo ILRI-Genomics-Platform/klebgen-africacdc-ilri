@@ -28,6 +28,12 @@ fi
 AMRFINDER_DB="${AMRFINDER_DB:-}"        # .tar.gz or folder
 REFERENCE_SHEET="${REFERENCE_SHEET:-${PIPELINE_DIR}/conf/phylo_references.csv}"
 MIN_GROUP="${MIN_GROUP:-2}"             # phylogeny: smallest group (species + ST) that is analysed
+# Phylogeny SNP method, as the pipeline's --phylo_method: snippy (map to the reference), ska2 (split k-mers),
+# or both (to compare them; SKA2's results go to 06_phylogeny/<group>_ska2/)
+PHYLO_METHOD="${PHYLO_METHOD:-snippy}"
+SKA_K="${SKA_K:-31}"                    # SKA2 split k-mer length (as the pipeline: -k 31)
+# Bakta (optional step 10b): the light database prepared by the trainer
+BAKTA_DB="${BAKTA_DB:-${SHARED_DIR}/databases/bakta/db-light}"
 
 # How the tools are run
 #   singularity : from the pipeline's shared images (same versions as the pipeline; nothing to install)

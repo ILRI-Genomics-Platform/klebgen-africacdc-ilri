@@ -18,6 +18,8 @@ info "threads/RAM : ${THREADS} / ${MEM_GB} GB"
 info "Kraken2 DB  : ${KRAKEN2_DB} $([ -d "${KRAKEN2_DB}" ] && echo '(found)' || echo '(NOT FOUND)')"
 info "references  : ${REFERENCES} $([ -d "${REFERENCES}" ] && echo "($(ls "${REFERENCES}"/*.fasta 2>/dev/null | wc -l) FASTA files)" || echo '(NOT FOUND)')"
 info "AMRFinder DB: ${AMRFINDER_DB:-(will be downloaded in step 08)}"
+info "Phylogeny   : PHYLO_METHOD=${PHYLO_METHOD} (snippy, ska2 or both)"
+info "Bakta DB    : ${BAKTA_DB} $([ -s "${BAKTA_DB}/version.json" ] && echo '(found)' || echo '(not found; only step 10b needs it)')"
 
 step "Input files"
 missing=0
@@ -64,7 +66,10 @@ if [ "$has_ecoli" = yes ]; then
 fi
 check AMRFINDERPLUS_RUN    "amrfinder --version"
 check MOBSUITE_RECON       "mob_recon --version"
-check SNIPPY_RUN           "snippy --version 2>&1"
+check SNIPPY_RUN           "snippy --version 2>&1"          # also cleans SKA2's alignment
+if [ "${PHYLO_METHOD}" != snippy ]; then
+    check SKA2                 "ska --version"                  # PHYLO_METHOD=ska2 or both (step 11)
+fi
 check GUBBINS              "run_gubbins.py --version 2>&1"
 check IQTREE               "iqtree --version"
 check SNPDISTS             "snp-dists -v"
@@ -72,6 +77,13 @@ check MULTIQC              "multiqc --version"
 required=$missing
 check PROKKA               "prokka --version 2>&1"           # optional (step 10)
 [ "$missing" -gt "$required" ] && warn "Prokka is not available: step 10 (optional) will not run"
+missing=$required
+check BAKTA_BAKTA          "bakta --version"                # optional (step 10b)
+if [ "$missing" -gt "$required" ]; then
+    warn "Bakta is not available: step 10b (optional) will not run"
+elif [ ! -s "${BAKTA_DB}/version.json" ]; then
+    warn "no Bakta database in ${BAKTA_DB}: step 10b (optional) will not run"
+fi
 missing=$required
 
 echo

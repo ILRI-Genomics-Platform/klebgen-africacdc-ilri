@@ -12,6 +12,44 @@ arguments in `conf/modules.config`.
 This is a teaching pipeline, not a validated production pipeline. For routine surveillance, validate it
 against reference isolates first or use an established community pipeline.
 
+## Workflow
+
+```mermaid
+flowchart TD
+    IN["Illumina reads, ONT reads (optional)<br/>or assemblies (assembly samplesheet)"] --> RQ
+    subgraph RQ["READ_QC (Module 1)"]
+        direction LR
+        FASTP["FASTP"] --> KR["KRAKEN2_KRAKEN2<br/>→ BRACKEN_BRACKEN"]
+        FL["FILTLONG<br/>→ NANOPLOT"]
+    end
+    RQ --> AS
+    subgraph AS["ASSEMBLY (Module 2)"]
+        direction LR
+        SHO["SHOVILL"] --> BEST{"best assembly<br/>hybrid first"}
+        AC["AUTOCYCLER_ASSEMBLE → MEDAKA<br/>→ POLYPOLISH_SHORTREAD → PYPOLCA_RUN"] --> BEST
+        BEST --> QUAST["QUAST"]
+    end
+    AS --> TA
+    AS -.-> ANN["PROKKA (--run_prokka)<br/>BAKTA_BAKTA (--run_bakta)"]
+    subgraph TA["TYPING_AMR (Modules 3, 4, 5, 7)"]
+        direction LR
+        TYP["KLEBORATE, KAPTIVE<br/>E. coli: ECTYPER, EZCLERMONT"]
+        AMR["AMRFINDERPLUS_UPDATE<br/>→ AMRFINDERPLUS_RUN"]
+        MOB["MOBSUITE_RECON"]
+    end
+    TA -- "Kleborate species + ST:<br/>one group per ST" --> PH
+    subgraph PH["PHYLOGENY (Module 6): trimmed reads (or assemblies) per group"]
+        SNP["--phylo_method snippy / both<br/>SNIPPY_RUN or SNIPPY_CONTIGS → SNIPPY_CORE"] --> CLEAN["SNIPPY_CLEAN"]
+        SKA["--phylo_method ska2 / both<br/>SKA2: ska build, map, distance"] --> CLEAN
+        CLEAN --> GUB["GUBBINS → IQTREE"] --> DIST["SNPDISTS"]
+    end
+    PH -. "--phylo_method both" .-> CMP["bin/compare_snp_methods.py<br/>(after the run)"]
+    PH --> MQC["MULTIQC: QC, assembly<br/>and annotation reports"]
+```
+
+Dashed arrows are optional. `--phylo_method` picks the SNP method (`snippy`, the default; `ska2`; or `both`),
+see [Phylogeny](#snippy-or-ska2---phylo_method).
+
 ## Layout
 
 ```text
