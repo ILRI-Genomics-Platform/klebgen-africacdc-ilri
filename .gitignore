@@ -3,4 +3,5 @@
 *.fq.gz
 *.bam
 work/
+training_data/
 .nextflow*
