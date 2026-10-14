@@ -138,6 +138,13 @@ _tools_exec() {
         while read -r _ _ f; do export -fn "$f" 2>/dev/null; done < <(declare -Fx)
         if [ "$tool" = Bandage ]; then        # Bandage draws images without a display
             export SINGULARITYENV_QT_QPA_PLATFORM=offscreen APPTAINERENV_QT_QPA_PLATFORM=offscreen
+            # Qt needs a private runtime folder. The login node's /run/user/<uid> is copied into an interactive
+            # session but does not exist on the compute node, so use one in /tmp (shared with the container).
+            if [ ! -d "${XDG_RUNTIME_DIR:-/nonexistent}" ] || [ ! -w "${XDG_RUNTIME_DIR:-/nonexistent}" ]; then
+                export XDG_RUNTIME_DIR="${TMPDIR:-/tmp}/runtime-${USER:-$(id -un)}"
+                mkdir -p -m 700 "$XDG_RUNTIME_DIR"
+            fi
+            export SINGULARITYENV_XDG_RUNTIME_DIR="$XDG_RUNTIME_DIR" APPTAINERENV_XDG_RUNTIME_DIR="$XDG_RUNTIME_DIR"
         fi
         exec "${_TOOLS_SIF_BIN}" exec ${binds} "$image" "$tool" "$@"
     )
