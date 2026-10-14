@@ -77,6 +77,7 @@ Everyone checks everyone else's numbers before the presentation.
 - [ ] Resistance: ESBL, carbapenemase and aminoglycoside genes; agreement with AST.
 - [ ] Plasmids: which resistance genes are on plasmids, and are the same plasmids found in several isolates?
 - [ ] Transmission: a tree and SNP distances for each group (e.g. `Kpneumoniae_ST39`); each cluster classified with ward and year.
+- [ ] Robustness: does each cluster call hold with both Snippy and SKA2? (`bin/compare_snp_methods.py --phylo $SHARED/capstone/precomputed/06_phylogeny --out $COURSE/capstone/snippy_vs_ska2`)
 - [ ] Antigens: K and O types of any cluster.
 - [ ] Master table: one row per isolate, row count checked.
 

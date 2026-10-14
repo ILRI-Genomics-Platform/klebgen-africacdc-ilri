@@ -22,6 +22,9 @@
 # The trainer's pre-computed runs for the course (course/TRAINER_GUIDE.md, section 8.1), from $SHARED/neonatal-amr-nf:
 #     sbatch --export=ALL,PRESET=training submit_neonatal_amr_reads.sbatch   # 29 isolates -> $SHARED/precomputed/pipeline_results
 #     sbatch --export=ALL,PRESET=capstone submit_neonatal_amr_reads.sbatch   # capstone    -> $SHARED/capstone/precomputed
+#   The presets build each phylogeny with both Snippy and SKA2 (PHYLO_METHOD=both), for the course's comparison.
+#
+# Phylogeny method for any run: --export=ALL,PHYLO_METHOD=both   (snippy, the default; ska2; or both)
 #
 # Follow it:   squeue -u $USER       tail -f logs/<user>_reads_<jobid>.txt
 # Stop it:     scancel <jobid>       (the analysis jobs stop too; submit again and -resume continues)
@@ -59,12 +62,14 @@ case "${PRESET}" in
         RUN_NAME="${RUN_NAME:-precomputed_training}"
         INPUT="${INPUT:-${SHARED}/samplesheet.csv}"
         OUTDIR="${OUTDIR:-${SHARED}/precomputed/pipeline_results}"
-        WORKDIR="${WORKDIR:-${BASE_DIR}/work_precomputed}" ;;
+        WORKDIR="${WORKDIR:-${BASE_DIR}/work_precomputed}"
+        PHYLO_METHOD="${PHYLO_METHOD:-both}" ;;
     capstone)
         RUN_NAME="${RUN_NAME:-precomputed_capstone}"
         INPUT="${INPUT:-${SHARED}/capstone/samplesheet.csv}"
         OUTDIR="${OUTDIR:-${SHARED}/capstone/precomputed}"
-        WORKDIR="${WORKDIR:-${BASE_DIR}/work_capstone}" ;;
+        WORKDIR="${WORKDIR:-${BASE_DIR}/work_capstone}"
+        PHYLO_METHOD="${PHYLO_METHOD:-both}" ;;
     "") ;;
     *) echo "[ERROR] PRESET must be 'training' or 'capstone' (got '${PRESET}')" >&2; exit 1 ;;
 esac
@@ -79,6 +84,7 @@ WORKDIR="${WORKDIR:-${BASE_DIR}/work}"
 KRAKEN2_DB="${KRAKEN2_DB:-${SHARED}/databases/kraken2}"            # shared Kraken2 Standard-8 (course/TRAINER_GUIDE.md, 5.1)
 AMRFINDER_DB="${AMRFINDER_DB:-${SHARED}/databases/amrfinderplus/amrfinderdb.tar.gz}"   # shared AMRFinderPlus database (course/TRAINER_GUIDE.md, 5.1)
 MIN_GROUP="${MIN_GROUP:-3}"                                       # --phylo_min_group_size
+PHYLO_METHOD="${PHYLO_METHOD:-snippy}"                            # --phylo_method: snippy, ska2 or both
 
 # Nextflow keeps its run history (needed by -resume) in the folder it starts from.
 # A fixed launch folder per run name means a resubmission always resumes the same run.
@@ -135,6 +141,7 @@ echo " Outdir     : ${OUTDIR}"
 echo " Work dir   : ${WORKDIR}"
 echo " Launch dir : ${LAUNCH_DIR}"
 echo " Kraken2 DB : ${KRAKEN2_DB}"
+echo " Phylogeny  : ${PHYLO_METHOD}"
 echo " AMRFinder  : ${AMRFINDER_DB}"
 [[ -n "${PRESET}" ]] && echo " Preset     : ${PRESET}"
 echo "================================================="
@@ -155,6 +162,7 @@ nextflow run "${PIPELINE_DIR}/main.nf" \
     --kraken2_db "${KRAKEN2_DB}" \
     --amrfinderplus_db "${AMRFINDER_DB}" \
     --phylo_min_group_size "${MIN_GROUP}" \
+    --phylo_method "${PHYLO_METHOD}" \
     -resume \
     || status=$?
 

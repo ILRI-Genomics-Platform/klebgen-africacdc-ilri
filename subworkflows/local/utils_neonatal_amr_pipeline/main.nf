@@ -53,8 +53,8 @@ workflow PIPELINE_INITIALISATION {
         if (!(params.phylo_grouping in ['kleborate', 'samplesheet'])) {
             error("--phylo_grouping must be 'kleborate' or 'samplesheet' (got '${params.phylo_grouping}')")
         }
-        if (!(params.phylo_method in ['snippy', 'ska2'])) {
-            error("--phylo_method must be 'snippy' or 'ska2' (got '${params.phylo_method}')")
+        if (!(params.phylo_method in ['snippy', 'ska2', 'both'])) {
+            error("--phylo_method must be 'snippy', 'ska2' or 'both' (got '${params.phylo_method}')")
         }
         if (params.phylo_grouping == 'kleborate') {
             def missingRefs = readReferenceSheet(params.phylo_reference_sheet)

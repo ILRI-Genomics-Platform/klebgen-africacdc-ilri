@@ -10,6 +10,9 @@
 //   ska2             split k-mers of the whole group (SKA2): ska build, then ska map onto the same reference.
 //                    Its alignment has the same layout as snippy-core's, so the steps after it are the same.
 //                    Also writes reference-free SNP distances (<group>.ska_distances.tsv).
+//   both             both of the above for every group, to compare them: Snippy's results are named after the
+//                    group (Kpneumoniae_ST39), SKA2's get '_ska2' (Kpneumoniae_ST39_ska2).
+//                    bin/compare_snp_methods.py puts the two sets of SNP distances side by side.
 //
 // Groups and references (--phylo_grouping):
 //   kleborate   (default) group = species + ST reported by Kleborate, e.g. Kpneumoniae_ST39.
@@ -44,7 +47,7 @@ workflow PHYLOGENY {
     reference_dir       // folder with <accession>.fasta (kleborate mode)
     phylo_references    // CSV group,fasta or null (samplesheet mode)
     min_group_size      // groups smaller than this are skipped
-    method              // 'snippy' or 'ska2'
+    method              // 'snippy', 'ska2' or 'both'
 
     main:
     if (grouping == 'kleborate') {
@@ -124,7 +127,7 @@ workflow PHYLOGENY {
     ch_full_aln      = channel.empty()
     ch_core_aln      = channel.empty()
     ch_ska_distances = channel.empty()
-    if (method == 'ska2') {
+    if (method in ['ska2', 'both']) {
         // ---- SKA2: one run per group, on all its isolates (reads and/or contigs) and its reference
         ch_ska_in = ch_reads_grouped
             .map { meta, files -> [meta.phylo_group, meta, files] }
@@ -136,13 +139,14 @@ workflow PHYLOGENY {
             .groupTuple()
             .combine(ch_refs, by: 0)
             .multiMap { group, ids, nfiles, files, ref ->
-                ska: [[id: group], ids, nfiles, files.flatten()]
+                ska: [[id: method == 'both' ? "${group}_ska2" : group, group: group, method: 'ska2'], ids, nfiles, files.flatten()]
                 ref: ref
             }
         SKA2(ch_ska_in.ska, ch_ska_in.ref)
-        ch_full_aln      = SKA2.out.full_aln
+        ch_full_aln      = ch_full_aln.mix(SKA2.out.full_aln)
         ch_ska_distances = SKA2.out.distances
-    } else {
+    }
+    if (method in ['snippy', 'both']) {
         // ---- map each isolate to its group reference: reads with Snippy, assemblies with snippy --ctgs
         ch_to_map = ch_reads_grouped
             .map { meta, reads -> [meta.phylo_group, meta, reads] }
@@ -171,24 +175,24 @@ workflow PHYLOGENY {
             .groupTuple()
             .combine(ch_refs, by: 0)
             .multiMap { group, vcfs, aligned, ref ->
-                core: [[id: group], vcfs, aligned]
+                core: [[id: group, group: group, method: 'snippy'], vcfs, aligned]
                 ref:  ref
             }
         SNIPPY_CORE(ch_core_in.core, ch_core_in.ref)
-        ch_full_aln      = SNIPPY_CORE.out.full_aln
+        ch_full_aln      = ch_full_aln.mix(SNIPPY_CORE.out.full_aln)
         ch_core_aln      = SNIPPY_CORE.out.aln
     }
     SNIPPY_CLEAN(ch_full_aln)
 
     // ---- groups big enough for a tree: alignment = reference + isolates >= 4 sequences
     ch_clean = SNIPPY_CLEAN.out.aln
-        .map { meta, aln -> [meta.id, meta, aln] }
+        .map { meta, aln -> [meta.group, meta, aln] }
         .combine(ch_group_sizes, by: 0)
-        .branch { group, meta, aln, n ->
+        .branch { _group, meta, aln, n ->
             tree: n >= 3
                 return [meta, aln]
             pair: true
-                log.warn "Phylogeny group ${group} has ${n} isolates: too few for Gubbins and IQ-TREE (they need 3 or more). " +
+                log.warn "Phylogeny group ${meta.id} has ${n} isolates: too few for Gubbins and IQ-TREE (they need 3 or more). " +
                     "Reporting SNP distances from the core alignment only, without recombination filtering."
                 return [meta, aln]
         }

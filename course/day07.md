@@ -25,7 +25,7 @@ By the end of today you can:
 
 ## Module 6: Phylogenetics and outbreak detection (part 2)
 
-### 6.9 Tree and metadata together in Microreact
+### 6.10 Tree and metadata together in Microreact
 
 Microreact shows a tree, a timeline and a table side by side. It needs a metadata file in CSV with an `id`
 column that matches the tree's tip names.
@@ -46,7 +46,7 @@ head -3 microreact_metadata.csv
 > [!NOTE]
 > The tree has a tip called `Reference` (from Snippy). It has no metadata row; that is fine.
 
-### 6.10 Classify the cluster
+### 6.11 Classify the cluster
 
 Use this framework for each group of closely related isolates:
 
@@ -66,6 +66,10 @@ Fill this in for the ST39 group:
 | `BHB7VE` | | 4A Female Medical Ward | 2016 | | |
 | `CHI11E` | | unknown | 2019 | | |
 
+Before you settle a classification, check that it does not depend on the method: look up the same pairs in the
+Snippy and SKA2 comparison you made on Day 6 (`$RESULTS/06_phylogeny/snippy_vs_ska2_pairs.tsv`). A pair that is
+close by one method and not the other is at most **possible** transmission until you know why.
+
 <details>
 <summary><b>Why is <code>BKR8JH</code> the interesting one?</b></summary>
 
@@ -77,7 +81,7 @@ What does that suggest before you even look at the SNPs?
 
 </details>
 
-### 6.11 When did the cluster start? BactDating
+### 6.12 When did the cluster start? BactDating
 
 First check whether there is enough **temporal signal**: do isolates collected later have accumulated more
 mutations from the root?
@@ -136,7 +140,7 @@ were noticed. With year-only dates, treat it as "around year X", not a month.
 
 </details>
 
-### 6.12 Write the outbreak summary
+### 6.13 Write the outbreak summary
 
 One page, in this order:
 

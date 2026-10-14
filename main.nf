@@ -36,7 +36,7 @@ workflow {
         // Shared read-only images: check the course-built images exist before starting
         if (workflow.containerEngine == 'singularity' && params.local_images) {
             def missing = params.local_images
-                .findAll { process, _image -> process != 'SKA2' || (params.phylo_method == 'ska2' && !params.skip_phylogeny) }
+                .findAll { process, _image -> process != 'SKA2' || (params.phylo_method in ['ska2', 'both'] && !params.skip_phylogeny) }
                 .collect { _process, image -> "${params.shared_container_dir}/local/${image}" }
                 .findAll { path -> !file(path).exists() }
             if (missing) {
@@ -136,7 +136,9 @@ def helpMessage() {
       --phylo_min_group_size   Smallest group analysed (tree: 3+)      [${params.phylo_min_group_size}]
       --phylo_method           snippy: map reads/contigs to the reference (Snippy)
                                ska2: split k-mers (SKA2), placed on the same reference;
-                                     also reference-free SNP distances  [${params.phylo_method}]
+                                     also reference-free SNP distances
+                               both: both, to compare (SKA2 results: <group>_ska2;
+                                     bin/compare_snp_methods.py)       [${params.phylo_method}]
 
     Typing and annotation:
       --skip_kaptive           No standalone Kaptive report (Kleborate

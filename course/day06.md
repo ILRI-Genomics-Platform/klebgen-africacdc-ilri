@@ -214,9 +214,35 @@ on the method.
 
 </details>
 
-> **In the pipeline.** `--phylo_method ska2` uses SKA2 instead of Snippy for every group: `ska map` places the
-> split k-mers on the same reference, so Gubbins, IQ-TREE and snp-dists run as before, and
-> `06_phylogeny/<group>/<group>.ska_distances.tsv` holds the reference-free distances you made here.
+**The same comparison, from the pipeline.** The pipeline can build every group's phylogeny with both methods
+(`--phylo_method both`): Snippy's results go to `06_phylogeny/<group>/`, SKA2's to `06_phylogeny/<group>_ska2/`.
+For SKA2, `ska map` places the split k-mers on the same reference, so Gubbins, IQ-TREE and snp-dists run on its
+alignment exactly as on Snippy's. Your trainers ran the training set this way; compare the two for every group:
+
+```bash
+P=$SHARED/precomputed/pipeline_results/06_phylogeny
+ls $P                                          # Kpneumoniae_ST39/ and Kpneumoniae_ST39_ska2/, ...
+python3 $SHARED/neonatal-amr-nf/bin/compare_snp_methods.py --phylo $P \
+    --threshold 20 --out $RESULTS/06_phylogeny/snippy_vs_ska2
+expand -t 14 $RESULTS/06_phylogeny/snippy_vs_ska2_pairs.tsv | less -S
+```
+
+For each group, the summary gives the **Spearman correlation** of the two sets of distances (1 = both methods
+rank the pairs the same way), the typical and largest **difference**, and how many pairs each method calls
+**close** (20 SNPs or fewer). The pairs table has one row per pair of isolates, with both distances after
+Gubbins and SKA2's reference-free distance (`ska2_ref_free`).
+
+<details>
+<summary><b>A pair is close by one method but not by the other. What do you do?</b></summary>
+
+Treat the pair as uncertain, and find out why before deciding. Look at the pair in both trees, and at Gubbins'
+recombination predictions for each (`06_phylogeny/gubbins/<group>.recombination_predictions.gff` and
+`<group>_ska2.recombination_predictions.gff`): a recombination block detected by one alignment but not the other
+moves many SNPs at once. Check the isolates' QC too: low coverage or a mixed sample affects the two methods
+differently. A conclusion about transmission should hold with either method; if it does not, report that it
+depends on the method.
+
+</details>
 
 ### 6.9 What does a SNP threshold mean?
 
@@ -284,7 +310,8 @@ within the group.
 - [ ] `ST39.treefile` and `ST39_snp_dists_filtered.tsv` exist.
 - [ ] You compared raw and recombination-filtered distances.
 - [ ] You have min, median and max distances for within-cluster and cluster-versus-other pairs.
-- [ ] You compared Snippy + Gubbins distances with SKA2's (`ST39_snippy_vs_ska.tsv`).
+- [ ] You compared Snippy + Gubbins distances with SKA2's (`ST39_snippy_vs_ska.tsv`), and the pipeline's two
+      methods for every group (`snippy_vs_ska2_summary.tsv`).
 - [ ] Optional: ST35 tree and distances.
 
 ## Further reading

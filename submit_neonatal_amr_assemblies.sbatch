@@ -57,6 +57,7 @@ OUTDIR="${OUTDIR:-${BASE_DIR}/outdir_${RUN_NAME}}"
 
 WORKDIR="${WORKDIR:-${BASE_DIR}/work}"
 MIN_GROUP="${MIN_GROUP:-3}"                                       # --phylo_min_group_size
+PHYLO_METHOD="${PHYLO_METHOD:-snippy}"                            # --phylo_method: snippy, ska2 or both
 AMRFINDER_DB="${AMRFINDER_DB:-${SHARED}/databases/amrfinderplus/amrfinderdb.tar.gz}"   # shared AMRFinderPlus database (course/TRAINER_GUIDE.md, 5.1)
 
 # Nextflow keeps its run history (needed by -resume) in the folder it starts from.
@@ -111,6 +112,7 @@ echo " Outdir     : ${OUTDIR}"
 echo " Work dir   : ${WORKDIR}"
 echo " Launch dir : ${LAUNCH_DIR}"
 echo " AMRFinder  : ${AMRFINDER_DB}"
+echo " Phylogeny  : ${PHYLO_METHOD}"
 echo "================================================="
 
 #-------------------------------------------------------------------------------
@@ -128,6 +130,7 @@ nextflow run "${PIPELINE_DIR}/main.nf" \
     -work-dir "${WORKDIR}" \
     --amrfinderplus_db "${AMRFINDER_DB}" \
     --phylo_min_group_size "${MIN_GROUP}" \
+    --phylo_method "${PHYLO_METHOD}" \
     -resume \
     || status=$?
 

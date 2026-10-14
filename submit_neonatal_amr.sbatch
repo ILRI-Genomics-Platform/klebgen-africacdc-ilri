@@ -54,6 +54,7 @@ WORKDIR="${WORKDIR:-${BASE_DIR}/work}"
 KRAKEN2_DB="${KRAKEN2_DB:-${SHARED}/databases/kraken2}"            # shared Kraken2 Standard-8 (course/TRAINER_GUIDE.md, 5.1)
 AMRFINDER_DB="${AMRFINDER_DB:-${SHARED}/databases/amrfinderplus/amrfinderdb.tar.gz}"   # shared AMRFinderPlus database (course/TRAINER_GUIDE.md, 5.1)
 MIN_GROUP="${MIN_GROUP:-2}"                                       # --phylo_min_group_size: 2 so the small test groups are kept
+PHYLO_METHOD="${PHYLO_METHOD:-snippy}"                            # --phylo_method: snippy, ska2 or both
 
 # Nextflow keeps its run history (needed by -resume) in the folder it starts from.
 # A fixed launch folder per run name means a resubmission always resumes the same run.
@@ -111,6 +112,7 @@ echo " Work dir   : ${WORKDIR}"
 echo " Launch dir : ${LAUNCH_DIR}"
 echo " Kraken2 DB : ${KRAKEN2_DB}"
 echo " AMRFinder  : ${AMRFINDER_DB}"
+echo " Phylogeny  : ${PHYLO_METHOD}"
 echo "================================================="
 
 #-------------------------------------------------------------------------------
@@ -129,6 +131,7 @@ nextflow run "${PIPELINE_DIR}/main.nf" \
     --kraken2_db "${KRAKEN2_DB}" \
     --amrfinderplus_db "${AMRFINDER_DB}" \
     --phylo_min_group_size "${MIN_GROUP}" \
+    --phylo_method "${PHYLO_METHOD}" \
     -resume \
     || status=$?
 

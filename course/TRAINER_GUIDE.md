@@ -424,7 +424,8 @@ these folders (all of `$SHARED/precomputed` can be locked read-only in the same 
 Each run takes hours (section 9 has estimates), so the pipeline runs as a Slurm job: it keeps going after you log
 out, and Nextflow submits every step as its own job. `submit_neonatal_amr_reads.sbatch` has a preset for each
 run: it sets the samplesheet, the results folder, a work folder in your own scratch space, and the course's
-shared databases (Kraken2 Standard-8 and AMRFinderPlus from section 5).
+shared databases (Kraken2 Standard-8 and AMRFinderPlus from section 5). Both runs build each phylogeny with
+Snippy and with SKA2 (`--phylo_method both`): Days 6, 7 and 10 compare the two with `bin/compare_snp_methods.py`.
 
 ```bash
 echo $SHARED                                   # must print the shared folder, e.g. /var/scratch/global/jjuma/neonatal-amr/shared

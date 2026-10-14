@@ -187,7 +187,15 @@ reference, 4 sequences); with `--phylo_min_group_size 2`, a pair gets SNP distan
 | `ska2` | [SKA2](https://github.com/bacpop/ska.rust) splits every isolate's reads or contigs into split k-mers (31 bp around each base) and compares them across the group, without mapping. `ska map` then places them on the same reference | `<group>.ska_distances.tsv`: reference-free SNP distances |
 
 Both give `<group>.full.aln` with the same layout, so Gubbins, IQ-TREE and snp-dists run the same way after
-either. SKA2 is fast, needs little memory, and its distances do not depend on the choice of reference: for
+either. `--phylo_method both` runs both for every group, to compare them: Snippy's results stay in
+`06_phylogeny/<group>/`, SKA2's go to `06_phylogeny/<group>_ska2/` (and `gubbins/<group>_ska2.*`). Then:
+
+```bash
+bin/compare_snp_methods.py --phylo results/06_phylogeny      # pairs and per-group summary, next to the results
+```
+
+It lists every pair of isolates with both distances (and SKA2's reference-free one), and per group the Spearman
+correlation, the typical and largest difference, and the pairs each method calls close (`--threshold`, 20 SNPs). SKA2 is fast, needs little memory, and its distances do not depend on the choice of reference: for
 closely related isolates (one ST, an outbreak) it uses sequence the reference lacks. It misses SNPs that lie
 within about 15 bp of another variant, and indels, so for diverse groups Snippy is the safer choice.
 Derelle *et al.* 2024, *Genome Research* 34:1661, [doi:10.1101/gr.279449.124](https://doi.org/10.1101/gr.279449.124).
@@ -267,7 +275,7 @@ section 7.
 | `--phylo_reference_sheet` | `conf/phylo_references.csv` | Reference genome per species / ST (kleborate mode) |
 | `--phylo_reference_dir` | `references/` (site configs: shared folder) | Folder with `<accession>.fasta`, filled by `bin/fetch_references.py` |
 | `--phylo_references` | none | Samplesheet mode: CSV `group,fasta`; by default each group's own best assembly (hybrid first, then fewest contigs) |
-| `--phylo_method` | `snippy` | `snippy` (map to the reference) or `ska2` (split k-mers; also reference-free SNP distances) |
+| `--phylo_method` | `snippy` | `snippy` (map to the reference), `ska2` (split k-mers; also reference-free SNP distances), or `both` (to compare; SKA2 results in `<group>_ska2/`) |
 | `--phylo_min_group_size` | 3 | Smallest group analysed (2 or more). Groups of 3+ get Gubbins, a tree and SNP distances; a group of 2 gets SNP distances only |
 | `--skip_phylogeny` | false | Skip Module 6 |
 | `--skip_kaptive` | false | No standalone Kaptive report (Kleborate's K/O columns remain) |
@@ -284,7 +292,7 @@ results/
 ├── 03_typing/        kleborate, kaptive (K and O reports, locus FASTA), ectyper, ezclermont
 ├── 04_amr/           amrfinderplus
 ├── 05_plasmids/      mobsuite
-├── 06_phylogeny/     <group>/ (core alignment, tree, SNP distances, snippy or SKA2), gubbins/; group e.g. Kpneumoniae_ST39
+├── 06_phylogeny/     <group>/ (core alignment, tree, SNP distances; Snippy or SKA2), <group>_ska2/ (--phylo_method both), gubbins/
 ├── multiqc/          multiqc_report.html
 └── pipeline_info/    software versions, execution report, timeline, trace
 ```
