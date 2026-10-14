@@ -44,13 +44,15 @@ echo "================================================="
 #-------------------------------------------------------------------------------
 PIPELINE_DIR="${PIPELINE_DIR:-${SLURM_SUBMIT_DIR:-$PWD}}"       # folder with main.nf (where you ran sbatch)
 BASE_DIR="${BASE_DIR:-/var/scratch/global/${USER}/neonatal-amr}"
+SHARED="${SHARED:-/var/scratch/global/jjuma/neonatal-amr/shared}"       # course shared folder (databases)
 
 RUN_NAME="${RUN_NAME:-test}"
 INPUT="${INPUT:-${PIPELINE_DIR}/assets/samplesheet_test_5samples.csv}"
 OUTDIR="${OUTDIR:-${BASE_DIR}/outdir_${RUN_NAME}}"                # outdir_test
 
 WORKDIR="${WORKDIR:-${BASE_DIR}/work}"
-KRAKEN2_DB="${KRAKEN2_DB:-/export/data/bio/kraken2/db/standard_20241228}"
+KRAKEN2_DB="${KRAKEN2_DB:-${SHARED}/databases/kraken2}"            # shared Kraken2 Standard-8 (course/TRAINER_GUIDE.md, 5.1)
+AMRFINDER_DB="${AMRFINDER_DB:-${SHARED}/databases/amrfinderplus/amrfinderdb.tar.gz}"   # shared AMRFinderPlus database (course/TRAINER_GUIDE.md, 5.1)
 MIN_GROUP="${MIN_GROUP:-2}"                                       # --phylo_min_group_size: 2 so the small test groups are kept
 
 # Nextflow keeps its run history (needed by -resume) in the folder it starts from.
@@ -84,6 +86,7 @@ fail() { echo "[ERROR] $*" >&2; exit 1; }
 head -n 1 "${INPUT}" | grep -q 'fastq_1' \
     || fail "${INPUT} has no fastq_1 column: it is not a reads samplesheet (for contigs use submit_neonatal_amr_assemblies.sbatch)"
 [[ -d "${KRAKEN2_DB}" ]]                     || fail "Kraken2 database folder not found: ${KRAKEN2_DB}"
+[[ -e "${AMRFINDER_DB}" ]] || fail "AMRFinderPlus database not found: ${AMRFINDER_DB} (course/TRAINER_GUIDE.md, section 5.1)"
 KRAKEN2_DB="${KRAKEN2_DB%/}"                 # no trailing slash in the Singularity bind
 
 # Every read file in the samplesheet must exist and be readable from the compute nodes
@@ -107,6 +110,7 @@ echo " Outdir     : ${OUTDIR}"
 echo " Work dir   : ${WORKDIR}"
 echo " Launch dir : ${LAUNCH_DIR}"
 echo " Kraken2 DB : ${KRAKEN2_DB}"
+echo " AMRFinder  : ${AMRFINDER_DB}"
 echo "================================================="
 
 #-------------------------------------------------------------------------------
@@ -123,6 +127,7 @@ nextflow run "${PIPELINE_DIR}/main.nf" \
     --outdir "${OUTDIR}" \
     -work-dir "${WORKDIR}" \
     --kraken2_db "${KRAKEN2_DB}" \
+    --amrfinderplus_db "${AMRFINDER_DB}" \
     --phylo_min_group_size "${MIN_GROUP}" \
     -resume \
     || status=$?

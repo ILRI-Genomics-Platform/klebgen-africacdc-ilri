@@ -12,9 +12,16 @@
 #     mkdir -p logs                          # Slurm does not create the log folder; the job fails without it
 #     sbatch submit_neonatal_amr_reads.sbatch                         # the 29-isolate training set (compact)
 #
+# Databases: the course's shared ones in $SHARED/databases (Kraken2 Standard-8, AMRFinderPlus), for every run.
+# Another one for a run:  --export=ALL,KRAKEN2_DB=/export/data/bio/kraken2/db/standard_20241228   (full Standard)
+#
 # Another samplesheet without editing this file:
 #     sbatch --export=ALL,INPUT=/path/samplesheet.csv,RUN_NAME=myrun submit_neonatal_amr_reads.sbatch
 #     (results go to <BASE_DIR>/outdir_<RUN_NAME>)
+#
+# The trainer's pre-computed runs for the course (course/TRAINER_GUIDE.md, section 8.1), from $SHARED/neonatal-amr-nf:
+#     sbatch --export=ALL,PRESET=training submit_neonatal_amr_reads.sbatch   # 29 isolates -> $SHARED/precomputed/pipeline_results
+#     sbatch --export=ALL,PRESET=capstone submit_neonatal_amr_reads.sbatch   # capstone    -> $SHARED/capstone/precomputed
 #
 # Follow it:   squeue -u $USER       tail -f logs/<user>_reads_<jobid>.txt
 # Stop it:     scancel <jobid>       (the analysis jobs stop too; submit again and -resume continues)
@@ -44,6 +51,24 @@ echo "================================================="
 PIPELINE_DIR="${PIPELINE_DIR:-${SLURM_SUBMIT_DIR:-$PWD}}"       # folder with main.nf (where you ran sbatch)
 BASE_DIR="${BASE_DIR:-/var/scratch/global/${USER}/neonatal-amr}"
 
+# Pre-computed course runs (PRESET=training or capstone) set the samplesheet, results, work folder and databases
+SHARED="${SHARED:-/var/scratch/global/jjuma/neonatal-amr/shared}"
+PRESET="${PRESET:-}"
+case "${PRESET}" in
+    training)
+        RUN_NAME="${RUN_NAME:-precomputed_training}"
+        INPUT="${INPUT:-${SHARED}/samplesheet.csv}"
+        OUTDIR="${OUTDIR:-${SHARED}/precomputed/pipeline_results}"
+        WORKDIR="${WORKDIR:-${BASE_DIR}/work_precomputed}" ;;
+    capstone)
+        RUN_NAME="${RUN_NAME:-precomputed_capstone}"
+        INPUT="${INPUT:-${SHARED}/capstone/samplesheet.csv}"
+        OUTDIR="${OUTDIR:-${SHARED}/capstone/precomputed}"
+        WORKDIR="${WORKDIR:-${BASE_DIR}/work_capstone}" ;;
+    "") ;;
+    *) echo "[ERROR] PRESET must be 'training' or 'capstone' (got '${PRESET}')" >&2; exit 1 ;;
+esac
+
 RUN_NAME="${RUN_NAME:-compact}"
 INPUT="${INPUT:-${PIPELINE_DIR}/assets/samplesheet_training_set_compact.csv}"
 # 5-sample test instead:
@@ -51,7 +76,8 @@ INPUT="${INPUT:-${PIPELINE_DIR}/assets/samplesheet_training_set_compact.csv}"
 OUTDIR="${OUTDIR:-${BASE_DIR}/outdir_${RUN_NAME}}"
 
 WORKDIR="${WORKDIR:-${BASE_DIR}/work}"
-KRAKEN2_DB="${KRAKEN2_DB:-/export/data/bio/kraken2/db/standard_20241228}"
+KRAKEN2_DB="${KRAKEN2_DB:-${SHARED}/databases/kraken2}"            # shared Kraken2 Standard-8 (course/TRAINER_GUIDE.md, 5.1)
+AMRFINDER_DB="${AMRFINDER_DB:-${SHARED}/databases/amrfinderplus/amrfinderdb.tar.gz}"   # shared AMRFinderPlus database (course/TRAINER_GUIDE.md, 5.1)
 MIN_GROUP="${MIN_GROUP:-3}"                                       # --phylo_min_group_size
 
 # Nextflow keeps its run history (needed by -resume) in the folder it starts from.
@@ -85,6 +111,7 @@ fail() { echo "[ERROR] $*" >&2; exit 1; }
 head -n 1 "${INPUT}" | grep -q 'fastq_1' \
     || fail "${INPUT} has no fastq_1 column: it is not a reads samplesheet (for contigs use submit_neonatal_amr_assemblies.sbatch)"
 [[ -d "${KRAKEN2_DB}" ]]                     || fail "Kraken2 database folder not found: ${KRAKEN2_DB}"
+[[ -e "${AMRFINDER_DB}" ]] || fail "AMRFinderPlus database not found: ${AMRFINDER_DB} (course/TRAINER_GUIDE.md, section 5.1)"
 KRAKEN2_DB="${KRAKEN2_DB%/}"                 # no trailing slash in the Singularity bind
 
 # Every read file in the samplesheet must exist and be readable from the compute nodes
@@ -108,6 +135,8 @@ echo " Outdir     : ${OUTDIR}"
 echo " Work dir   : ${WORKDIR}"
 echo " Launch dir : ${LAUNCH_DIR}"
 echo " Kraken2 DB : ${KRAKEN2_DB}"
+echo " AMRFinder  : ${AMRFINDER_DB}"
+[[ -n "${PRESET}" ]] && echo " Preset     : ${PRESET}"
 echo "================================================="
 
 #-------------------------------------------------------------------------------
@@ -124,6 +153,7 @@ nextflow run "${PIPELINE_DIR}/main.nf" \
     --outdir "${OUTDIR}" \
     -work-dir "${WORKDIR}" \
     --kraken2_db "${KRAKEN2_DB}" \
+    --amrfinderplus_db "${AMRFINDER_DB}" \
     --phylo_min_group_size "${MIN_GROUP}" \
     -resume \
     || status=$?

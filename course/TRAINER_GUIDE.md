@@ -421,38 +421,27 @@ these folders (all of `$SHARED/precomputed` can be locked read-only in the same 
 
 ### 8.1 Run the pipeline
 
-Each run takes hours (section 9 has estimates), so run Nextflow as a Slurm job rather than in your terminal: it
-keeps going after you log out, and Nextflow submits every step as its own job. Create the folders first; the
-work folders go to your own scratch space, not the shared folder.
+Each run takes hours (section 9 has estimates), so the pipeline runs as a Slurm job: it keeps going after you log
+out, and Nextflow submits every step as its own job. `submit_neonatal_amr_reads.sbatch` has a preset for each
+run: it sets the samplesheet, the results folder, a work folder in your own scratch space, and the course's
+shared databases (Kraken2 Standard-8 and AMRFinderPlus from section 5).
 
 ```bash
 echo $SHARED                                   # must print the shared folder, e.g. /var/scratch/global/jjuma/neonatal-amr/shared
-mkdir -p $SHARED/precomputed $SHARED/capstone
+cd $SHARED/neonatal-amr-nf
+mkdir -p logs
 
-# Training set (29 isolates) -> $SHARED/precomputed/pipeline_results
-cd $SHARED/precomputed
-sbatch -J pre-training -c 2 --mem=8G -t 3-00:00:00 -o pre-training_%j.log --wrap="module load nextflow/25.04 && \
-    nextflow run $SHARED/neonatal-amr-nf/main.nf -profile singularity -c $SHARED/neonatal-amr-nf/conf/slurm.config \
-    --input $SHARED/samplesheet.csv --outdir pipeline_results \
-    --kraken2_db $SHARED/databases/kraken2 \
-    --amrfinderplus_db $SHARED/databases/amrfinderplus/amrfinderdb.tar.gz \
-    -work-dir /var/scratch/global/$USER/neonatal-amr/work_precomputed -resume"
-
-# Capstone (section 4) -> $SHARED/capstone/precomputed
-cd $SHARED/capstone
-sbatch -J pre-capstone -c 2 --mem=8G -t 3-00:00:00 -o pre-capstone_%j.log --wrap="module load nextflow/25.04 && \
-    nextflow run $SHARED/neonatal-amr-nf/main.nf -profile singularity -c $SHARED/neonatal-amr-nf/conf/slurm.config \
-    --input $SHARED/capstone/samplesheet.csv --outdir precomputed \
-    --kraken2_db $SHARED/databases/kraken2 \
-    --amrfinderplus_db $SHARED/databases/amrfinderplus/amrfinderdb.tar.gz \
-    -work-dir /var/scratch/global/$USER/neonatal-amr/work_capstone -resume"
+sbatch --export=ALL,PRESET=training submit_neonatal_amr_reads.sbatch   # 29 isolates -> $SHARED/precomputed/pipeline_results
+sbatch --export=ALL,PRESET=capstone submit_neonatal_amr_reads.sbatch   # capstone (section 4) -> $SHARED/capstone/precomputed
 
 squeue -u $USER                                # the two head jobs, then their analysis jobs
-tail -f $SHARED/precomputed/pre-training_*.log
+tail -f logs/${USER}_reads_*.txt               # progress
 ```
 
-If a run stops, submit the same command again: `-resume` reuses every step that already finished. When both
-runs are complete and checked, the work folders can be deleted.
+The script creates the results folders, and stops before starting if the samplesheet, a read file or a
+database is missing. If a run stops, submit the same command again: `-resume` reuses every step that already
+finished. The work folders (`/var/scratch/global/$USER/neonatal-amr/work_precomputed` and `work_capstone`) can be
+deleted once both runs are complete and checked.
 
 ### 8.2 Arrange the assembly results for the manual steps
 
