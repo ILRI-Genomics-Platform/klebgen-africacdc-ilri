@@ -59,11 +59,16 @@ account number. Type `exit` to end the session at the end of the day.
 ### 0.1 Set up your course folder
 
 > [!IMPORTANT]
-> Run this block once, at the start of the course. It creates your folders and the shell variables used on every
-> page.
+> Run this block at the start of the course. It creates your folders and the shell variables used on every
+> page. It is safe to run again (for example if your trainer updates it): it first removes any earlier copy of
+> the course lines from `~/.bashrc`, so they are only ever there once.
 
 ```bash
 # Your trainer will tell you the value of SHARED and THREADS
+[ -f ~/.bashrc.before_course ] || cp ~/.bashrc ~/.bashrc.before_course     # a copy of your .bashrc, made once
+
+# Remove any earlier copy of the course lines, then add them (once)
+sed -i '/>>> neonatal-amr course >>>/,/<<< neonatal-amr course <<</d' ~/.bashrc
 cat >> ~/.bashrc <<'EOF'
 # >>> neonatal-amr course >>>
 export SHARED=/var/scratch/global/jjuma/neonatal-amr/shared
@@ -113,6 +118,29 @@ ls $COURSE/training_data
 > ```
 >
 > Then open a new terminal (or run `exec bash`). Your files in `$COURSE` are not touched.
+
+<details>
+<summary><b>The course lines are in my <code>~/.bashrc</code> more than once. How do I clean it up?</b></summary>
+
+Count the copies, keep a backup, remove every copy, then run the block above again to add one:
+
+```bash
+grep -c ">>> neonatal-amr course >>>" ~/.bashrc       # copies with markers
+grep -c "^export SHARED=" ~/.bashrc                    # all copies, including older ones without markers
+cp ~/.bashrc ~/.bashrc.backup
+
+# 1. Every copy between the >>> and <<< marker lines
+sed -i '/>>> neonatal-amr course >>>/,/<<< neonatal-amr course <<</d' ~/.bashrc
+# 2. Copies added before the markers existed: from 'export SHARED=...' to the closing '}' of pick()
+sed -i '\#^export SHARED=/var/scratch/global/jjuma/neonatal-amr/shared$#,/^}$/d' ~/.bashrc
+
+grep -c "^export SHARED=" ~/.bashrc                    # now 0; run the block above again, then: exec bash
+```
+
+Do not use `sort -u` or `uniq` on `~/.bashrc`: they remove repeated lines anywhere in the file, such as the `}`
+that closes each function, and break it. If anything goes wrong, `cp ~/.bashrc.backup ~/.bashrc` puts it back.
+
+</details>
 
 Now make short, readable names for the read files. The sample sheet lists each sample's files:
 
