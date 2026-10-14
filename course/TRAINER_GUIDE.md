@@ -421,19 +421,38 @@ these folders (all of `$SHARED/precomputed` can be locked read-only in the same 
 
 ### 8.1 Run the pipeline
 
+Each run takes hours (section 9 has estimates), so run Nextflow as a Slurm job rather than in your terminal: it
+keeps going after you log out, and Nextflow submits every step as its own job. Create the folders first; the
+work folders go to your own scratch space, not the shared folder.
+
 ```bash
+echo $SHARED                                   # must print the shared folder, e.g. /var/scratch/global/jjuma/neonatal-amr/shared
+mkdir -p $SHARED/precomputed $SHARED/capstone
+
+# Training set (29 isolates) -> $SHARED/precomputed/pipeline_results
 cd $SHARED/precomputed
-nextflow run $SHARED/neonatal-amr-nf/main.nf -profile singularity -c $SHARED/neonatal-amr-nf/conf/slurm.config \
+sbatch -J pre-training -c 2 --mem=8G -t 3-00:00:00 -o pre-training_%j.log --wrap="module load nextflow/25.04 && \
+    nextflow run $SHARED/neonatal-amr-nf/main.nf -profile singularity -c $SHARED/neonatal-amr-nf/conf/slurm.config \
     --input $SHARED/samplesheet.csv --outdir pipeline_results \
     --kraken2_db $SHARED/databases/kraken2 \
-    --amrfinderplus_db $SHARED/databases/amrfinderplus/amrfinderdb.tar.gz
+    --amrfinderplus_db $SHARED/databases/amrfinderplus/amrfinderdb.tar.gz \
+    -work-dir /var/scratch/global/$USER/neonatal-amr/work_precomputed -resume"
 
+# Capstone (section 4) -> $SHARED/capstone/precomputed
 cd $SHARED/capstone
-nextflow run $SHARED/neonatal-amr-nf/main.nf -profile singularity -c $SHARED/neonatal-amr-nf/conf/slurm.config \
-    --input samplesheet.csv --outdir precomputed \
+sbatch -J pre-capstone -c 2 --mem=8G -t 3-00:00:00 -o pre-capstone_%j.log --wrap="module load nextflow/25.04 && \
+    nextflow run $SHARED/neonatal-amr-nf/main.nf -profile singularity -c $SHARED/neonatal-amr-nf/conf/slurm.config \
+    --input $SHARED/capstone/samplesheet.csv --outdir precomputed \
     --kraken2_db $SHARED/databases/kraken2 \
-    --amrfinderplus_db $SHARED/databases/amrfinderplus/amrfinderdb.tar.gz
+    --amrfinderplus_db $SHARED/databases/amrfinderplus/amrfinderdb.tar.gz \
+    -work-dir /var/scratch/global/$USER/neonatal-amr/work_capstone -resume"
+
+squeue -u $USER                                # the two head jobs, then their analysis jobs
+tail -f $SHARED/precomputed/pre-training_*.log
 ```
+
+If a run stops, submit the same command again: `-resume` reuses every step that already finished. When both
+runs are complete and checked, the work folders can be deleted.
 
 ### 8.2 Arrange the assembly results for the manual steps
 
