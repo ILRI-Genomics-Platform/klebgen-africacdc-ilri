@@ -32,7 +32,7 @@
 #
 #SBATCH --job-name=amr-precomputed
 #SBATCH --partition=batch
-#SBATCH --cpus-per-task=16
+#SBATCH --cpus-per-task=4
 #SBATCH --mem=64G
 #SBATCH --time=1-00:00:00
 #SBATCH --output=logs/%u_precomputed_%j.txt
