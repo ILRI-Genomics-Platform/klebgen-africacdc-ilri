@@ -15,6 +15,7 @@
 #     use_tools nextflow    # Nextflow (module)
 #     use_tools all         # every group above at once
 #     list_tools            # every group, its tools and where each comes from
+#     use_precomputed 01_qc/kraken2   # copy the trainers' results for the samples you did not run ($PRACTICE)
 #
 # Forgot `use_tools`, or logged in again after a disconnect? A course tool typed on its own still runs:
 # when bash cannot find a command, command_not_found_handle (below) runs it from its image (or loads its
@@ -233,6 +234,42 @@ list_tools() {
     done
     echo "== r          module ${R_MODULE}"
     echo "== nextflow   module ${NEXTFLOW_MODULE}"
+}
+
+# ------------------------------------------------------------------------------ practice samples
+# In the practicals you run each slow step yourself on a few isolates ($PRACTICE), then copy the trainers'
+# results for the others with use_precomputed. The trainers' results ($PRECOMPUTED, made by
+# course/make_precomputed.sh) use the same folders as your $RESULTS, so the copies land where the next step
+# expects them.
+PRACTICE="${PRACTICE:-CHI11E BHB7VE CAA65Z}"     # three ST39 isolates; CHI11E also has Nanopore reads
+PRECOMPUTED="${PRECOMPUTED:-${SHARED:-/var/scratch/global/jjuma/neonatal-amr/shared}/precomputed}"
+export PRACTICE PRECOMPUTED
+
+# use_precomputed PATH... : copy the trainers' results for PATH (a folder or file under $RESULTS, e.g.
+# 01_qc/kraken2) into $RESULTS. Files you already have are never overwritten.
+use_precomputed() {
+    local p src dest before after status=0
+    if [ $# -eq 0 ]; then
+        _tools_msg "usage: use_precomputed <folder or file under \$RESULTS> ...   e.g. use_precomputed 01_qc/kraken2"
+        _tools_msg "available: $(cd "${PRECOMPUTED}" 2>/dev/null && find . -mindepth 2 -maxdepth 2 | sed 's#^\./##' | sort | tr '\n' ' ')"
+        return 1
+    fi
+    [ -n "${RESULTS:-}" ] || { _tools_msg "ERROR: RESULTS is not set (Day 1, section 0.1)"; return 1; }
+    for p in "$@"; do
+        p=${p#"$RESULTS"/}; p=${p#/}; p=${p%/}
+        src="${PRECOMPUTED}/$p"
+        if [ ! -e "$src" ]; then
+            _tools_msg "use_precomputed: nothing for '$p' in ${PRECOMPUTED} (ask your trainer)"; status=1; continue
+        fi
+        dest="$RESULTS/$p"
+        mkdir -p "$(dirname "$dest")"
+        before=$(find "$dest" -type f 2>/dev/null | wc -l)
+        cp -rn "$src" "$(dirname "$dest")/" 2>/dev/null
+        chmod -R u+w "$dest" 2>/dev/null      # the trainers' copies are read-only; yours must not be
+        after=$(find "$dest" -type f 2>/dev/null | wc -l)
+        _tools_msg "$p: $((after - before)) file(s) copied from the trainers' results (your own files were kept)"
+    done
+    return $status
 }
 
 # ------------------------------------------------------------------------------ automatic loading

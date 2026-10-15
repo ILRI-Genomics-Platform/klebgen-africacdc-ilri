@@ -29,7 +29,7 @@ server before participants arrive.
 | 3 weeks before | Prepare and lock the pipeline's Singularity images (section 7) |
 | 3 weeks before | Download data (section 4) and databases (section 5, after the images of section 7) |
 | 2 weeks before | Run the pipeline on the training and capstone sets (section 8) |
-| 2 weeks before | Pre-compute the manual steps (section 8) |
+| 2 weeks before | Pre-compute the manual steps for all isolates: `course/make_precomputed.sh` (section 8.2) |
 | 1 week before | Dry run: one trainer works through every page, Day 1 to Day 10, on a participant account |
 | 1 day before | Check every account can log in (`ssh -y userN@hpc.ilri.cgiar.org`), start a session on its node and run `use_tools qc && fastp --version` |
 | 1 day before | As a participant: `bin/prepare_shared_containers.sh --check` shows all images present |
@@ -70,7 +70,8 @@ command that was running in it; files and `~/.bashrc` settings are kept. After `
 load automatically (`command_not_found_handle` in `course/tools.sh` runs a course tool from its image, or loads
 its modules, when `use_tools` has not been run), so participants only re-run the interrupted step or copy its
 pre-computed results. Nothing short of `screen`/`tmux` or a batch job keeps a running command alive through a
-disconnect, so the long steps (Shovill, Autocycler, the pipeline) all have pre-computed results (section 8).
+disconnect, so participants run slow steps only on their practice isolates and copy the rest with
+`use_precomputed` (section 8).
 
 ## 3. The shared folder
 
@@ -92,7 +93,7 @@ $SHARED/                                   e.g. /var/scratch/global/jjuma/neonat
 │   ├── amrfinderplus/latest/              AMRFinderPlus database, plus amrfinderdb.tar.gz and VERSION
 │   ├── checkm2/CheckM2_database/uniref100.KO.1.dmnd
 │   └── bakta/db-light/                    Bakta light database v6
-├── precomputed/                           section 7
+├── precomputed/                           section 8: mirrors a participant's $RESULTS
 ├── capstone/                              samplesheet.csv, metadata_capstone.tsv, ast_capstone.tsv, precomputed/
 └── public_genomes/ST39/                   optional, Day 9
 ```
@@ -417,17 +418,36 @@ Prokka annotation is optional (`--run_prokka`); its image is prepared with the o
 
 ## 8. Pre-computed results
 
-Participants run some slow steps on one or two samples, then copy pre-computed results for the rest. Pages expect
-these folders (all of `$SHARED/precomputed` can be locked read-only in the same way as the images):
+Participants run each slow step themselves on three **practice isolates** (`$PRACTICE`, set in their
+`~/.bashrc` on Day 1: `CHI11E BHB7VE CAA65Z`, all ST39; `CHI11E` is also a hybrid isolate), then copy your results
+for the other isolates with `use_precomputed <folder>` (in `course/tools.sh`). `$SHARED/precomputed` therefore
+mirrors a participant's `$RESULTS`, folder for folder, and `use_precomputed 01_qc/kraken2` copies
+`$SHARED/precomputed/01_qc/kraken2` into `$RESULTS/01_qc/kraken2` without overwriting the participant's own files.
 
-| Folder | Contents | Used on |
-| --- | --- | --- |
-| `precomputed/02_assembly/shovill/<sample>/contigs.fa` (and `contigs.gfa`) | Shovill assembly and graph for all 29 | Day 2 |
-| `precomputed/02_assembly/autocycler/<sample>/autocycler_out/consensus_assembly.fasta` | 3 hybrid isolates | Day 2 |
-| `precomputed/02_assembly/hybrid/<sample>.hybrid.fasta` | 3 polished hybrid assemblies | Day 2 |
-| `precomputed/05_plasmids/shortread/<sample>/` | MOB-suite on each Shovill assembly | Day 5 |
-| `precomputed/pipeline_results/` | Full pipeline run, training set | Day 5 |
-| `capstone/precomputed/` | Full pipeline run, capstone set | Day 10 |
+| Folder under `$SHARED/precomputed/` | Contents | Participants run themselves | Day |
+| --- | --- | --- | --- |
+| `01_qc/read_stats.tsv` | seqkit stats, every read file | practice isolates | 1 |
+| `01_qc/fastp/` | fastp reports (`.json`, `.html`, `.log`) | practice isolates | 1 |
+| `01_qc/nanoplot/` | NanoPlot before and after Filtlong, 3 hybrid isolates | `CHI11E` | 1 |
+| `01_qc/kraken2/` | Kraken2 reports and Bracken tables | practice isolates | 1 |
+| `02_assembly/shovill/<sample>/` | Shovill `contigs.fa` and `contigs.gfa` | `CHI11E` (more if time) | 2 |
+| `02_assembly/checkm2/` | CheckM2 on every Shovill assembly | practice isolates | 2 |
+| `02_assembly/autocycler/<sample>/autocycler_out/` | Autocycler consensus, 3 hybrid isolates | `CHI11E` | 2 |
+| `02_assembly/hybrid/<sample>.hybrid.fasta` | polished hybrid assemblies | `CHI11E` | 2 |
+| `03_typing/kleborate/` | Kleborate on every best assembly | practice isolates | 3 |
+| `04_amr/amrfinderplus/<sample>.tsv` | AMRFinderPlus, one file per isolate | practice isolates | 3 |
+| `05_plasmids/hybrid/<sample>/`, `05_plasmids/shortread/<sample>/` | MOB-suite on hybrid and Shovill assemblies | `CHI11E` | 4–5 |
+| `06_phylogeny/ST39/snippy/<sample>/` | Snippy against the `CHI11E` chromosome, 12 ST39 isolates | practice isolates | 6 |
+| `07_antigens/kaptive_k.tsv`, `kaptive_o.tsv` | Kaptive on every best assembly | practice isolates | 8 |
+| `pipeline_results/` | full pipeline run, training set | | 5 |
+| `capstone/precomputed/` (beside `precomputed/`) | full pipeline run, capstone set | | 10 |
+
+Steps that are quick with 1 CPU stay on all isolates: QUAST, MultiQC, SKA2 on the ST39 group, Gubbins, IQ-TREE,
+and the plasmid and gene searches on the three hybrid isolates.
+
+To change the practice set (for example to fit a shorter course), change `PRACTICE` in the Day 1 set-up block.
+Choose ST39 isolates, so that every one can be used in the Day 6 phylogeny, and keep `CHI11E`, the hybrid
+isolate used on Day 2.
 
 ### 8.1 Run the pipeline
 
@@ -454,32 +474,35 @@ database is missing. If a run stops, submit the same command again: `-resume` re
 finished. The work folders (`/var/scratch/global/$USER/neonatal-amr/work_precomputed` and `work_capstone`) can be
 deleted once both runs are complete and checked.
 
-### 8.2 Arrange the assembly results for the manual steps
+### 8.2 Make the participants' pre-computed results
+
+After the training pipeline run (8.1) has finished, `course/make_precomputed.sh` fills `$SHARED/precomputed` with
+the folders in the table above. It reuses the pipeline run wherever the pipeline used the same tool, options and
+database as the course page, and only renames files or adjusts columns to the course's format:
+
+| From the pipeline run (reused) | Made by the script (the course page's own command) |
+| --- | --- |
+| fastp reports; Kraken2 reports; Shovill, Autocycler and hybrid assemblies; Kleborate and Kaptive tables (merged into one table each); AMRFinderPlus tables (with the `Name` column the course's `--name` adds); MOB-suite on each best assembly | seqkit stats; NanoPlot and Filtlong (3 hybrid isolates); Bracken (the course uses `-r 150`, the pipeline its defaults); CheckM2; MOB-suite on the Shovill assemblies of the 3 hybrid isolates; fastp and Snippy for the 12 ST39 isolates (the pipeline maps to a different reference) |
+
+If a pipeline result is missing for a sample, the script runs the course's command for that sample instead.
 
 ```bash
-P=$SHARED/precomputed
-R=$P/pipeline_results/02_assembly
-
-for f in $R/shovill/*.contigs.fa; do
-    s=$(basename $f .contigs.fa)
-    mkdir -p $P/02_assembly/shovill/$s && cp $f $P/02_assembly/shovill/$s/contigs.fa
-    [ -f $R/shovill/$s.contigs.gfa ] && cp $R/shovill/$s.contigs.gfa $P/02_assembly/shovill/$s/contigs.gfa
-done
-for f in $R/autocycler/*.autocycler.fasta; do
-    s=$(basename $f .autocycler.fasta)
-    mkdir -p $P/02_assembly/autocycler/$s/autocycler_out
-    cp $f $P/02_assembly/autocycler/$s/autocycler_out/consensus_assembly.fasta
-    cp $R/autocycler/$s.autocycler.gfa $P/02_assembly/autocycler/$s/autocycler_out/consensus_assembly.gfa
-done
-mkdir -p $P/02_assembly/hybrid && cp $R/hybrid/*.hybrid.fasta $P/02_assembly/hybrid/
-
-# MOB-suite on every Shovill assembly (the pipeline runs it on the best assembly instead)
-source $SHARED/neonatal-amr-nf/course/tools.sh && use_tools plasmids
-for d in $P/02_assembly/shovill/*/; do
-    s=$(basename $d)
-    mob_recon --infile $d/contigs.fa --outdir $P/05_plasmids/shortread/$s -n 8
-done
+cd $SHARED/neonatal-amr-nf && mkdir -p logs
+sbatch course/make_precomputed.sh                                         # all steps, 16 CPUs, 64 GB
+sbatch --export=ALL,STEPS="kraken2 checkm2" course/make_precomputed.sh    # only some steps
+tail -f logs/${USER}_precomputed_*.txt
 ```
+
+Finished steps are skipped, so after a failure fix the cause and submit it again. Trimmed reads and other
+intermediate files go to `/var/scratch/global/$USER/neonatal-amr/precompute_work` (set `WORK` to change it),
+not to the shared folder; delete it when you are done. The script ends with a summary of file counts per folder.
+Then make the folder read-only for participants:
+
+```bash
+chmod -R o+rX,go-w $SHARED/precomputed
+```
+
+Before the course, log in as one participant account and check one copy: `use_precomputed 01_qc/kraken2`.
 
 ### 8.3 Time needed
 
@@ -489,7 +512,7 @@ Planning estimates, not measurements: run 3 isolates first and scale from Nextfl
 | --- | --- | --- |
 | Training set (29 isolates) | about 4–5 h | about 2.5–3 h |
 | Capstone set (5 test isolates, 1 hybrid) | about 2–3 h (the hybrid assembly sets the pace) | about 1.5–2 h |
-| MOB-suite on 29 Shovill assemblies | under 1 h | under 30 min |
+| `make_precomputed.sh` after the pipeline run (16 CPUs) | about 2–3 h (Snippy and CheckM2 take most of it) | the same: it runs as one 16-CPU job |
 
 ## 9. Known gaps and decisions for you
 

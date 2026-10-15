@@ -33,8 +33,8 @@ Two isolates with the same cluster ID probably carry the same plasmid, even if t
 
 ```bash
 use_tools plasmids
-# Short-read MOB-suite results for all 29 isolates (pre-computed; or run mob_recon on $COURSE/best/*.fasta)
-cp -rn $SHARED/precomputed/05_plasmids/shortread/* $RESULTS/05_plasmids/shortread/
+# Short-read MOB-suite results for all 29 isolates, from the trainers (yours for CHI11E are kept)
+use_precomputed 05_plasmids/shortread
 
 # One table: sample, cluster, replicons, size, mobility
 for f in $RESULTS/05_plasmids/shortread/*/mobtyper_results.txt; do

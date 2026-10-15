@@ -43,9 +43,14 @@ By the end of today you can:
 use_tools typing
 mkdir -p $RESULTS/07_antigens
 
-kaptive assembly kpsc_k $COURSE/best/*.fasta -o $RESULTS/07_antigens/kaptive_k.tsv -t $THREADS
-kaptive assembly kpsc_o $COURSE/best/*.fasta -o $RESULTS/07_antigens/kaptive_o.tsv -t $THREADS
+# Your practice isolates
+practice=$(for s in $PRACTICE; do echo $COURSE/best/$s.fasta; done)
+kaptive assembly kpsc_k $practice -o $RESULTS/07_antigens/kaptive_k_practice.tsv -t $THREADS
+kaptive assembly kpsc_o $practice -o $RESULTS/07_antigens/kaptive_o_practice.tsv -t $THREADS
+pick 'Best match locus|Best match type|Match confidence|Problems' $RESULTS/07_antigens/kaptive_k_practice.tsv
 
+# The trainers' tables for all 29 isolates (kaptive_k.tsv, kaptive_o.tsv), used below
+use_precomputed 07_antigens
 pick 'Best match locus|Best match type|Match confidence|Problems' $RESULTS/07_antigens/kaptive_k.tsv
 ```
 

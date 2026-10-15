@@ -52,13 +52,13 @@ shovill --R1 $COURSE/trimmed/${s}_R1.fastq.gz --R2 $COURSE/trimmed/${s}_R2.fastq
 grep -c ">" $RESULTS/02_assembly/shovill/$s/contigs.fa
 ```
 
-> [!TIP]
-> Your trainers have pre-computed Shovill assemblies for all 29 isolates in
-> `$SHARED/precomputed/02_assembly/shovill/`. Assemble two or three yourself, then copy the rest:
->
-> ```bash
-> cp -rn $SHARED/precomputed/02_assembly/shovill/* $RESULTS/02_assembly/shovill/
-> ```
+While it runs, copy the trainers' Shovill assemblies for the other isolates (yours are kept). If you have time
+later, assemble `BHB7VE` and `CAA65Z` too: the rest of your practice set.
+
+```bash
+use_precomputed 02_assembly/shovill
+ls $RESULTS/02_assembly/shovill | wc -l     # 29
+```
 
 ### 2.3 Assembly quality: QUAST and CheckM2
 
@@ -73,9 +73,14 @@ quast.py $COURSE/assemblies/*.fasta -o $RESULTS/02_assembly/quast_shovill -t $TH
 # One row per assembly: contigs, total length, N50 and GC are the columns to look at
 less -S $RESULTS/02_assembly/quast_shovill/transposed_report.tsv
 
-checkm2 predict --input $COURSE/assemblies -x fasta \
-    --output-directory $RESULTS/02_assembly/checkm2 --threads $THREADS \
+# CheckM2 on your practice isolates (a few minutes each with 1 thread)
+checkm2 predict --input $(for s in $PRACTICE; do echo $COURSE/assemblies/$s.fasta; done) -x fasta \
+    --output-directory $RESULTS/02_assembly/checkm2_practice --threads $THREADS \
     --database_path $SHARED/databases/checkm2/CheckM2_database/uniref100.KO.1.dmnd
+cut -f1-3 $RESULTS/02_assembly/checkm2_practice/quality_report.tsv
+
+# The trainers' table for all 29: check your three rows, then look for problems
+use_precomputed 02_assembly/checkm2
 cut -f1-3 $RESULTS/02_assembly/checkm2/quality_report.tsv | sort -t$'\t' -k3,3gr | head
 ```
 
@@ -121,8 +126,9 @@ cd $COURSE
 
 > [!NOTE]
 > This builds 8 assemblies: with 1 thread it takes several hours, longer than the session. Start it, read 2.5
-> while it runs, and continue from the pre-computed results in `$SHARED/precomputed/02_assembly/autocycler/`;
-> compare them with yours when it finishes.
+> while it runs. If it has not finished when you reach 2.5, stop it (`Ctrl+C`) and fill in the trainers'
+> result: `use_precomputed 02_assembly/autocycler` adds the consensus assembly yours had not written yet, and
+> keeps everything your run did write.
 
 ### 2.5 Polishing: Medaka, Polypolish, Pypolca
 
@@ -248,7 +254,7 @@ From Day 3 onwards you use one assembly per isolate: the hybrid where there is o
 
 ```bash
 # Hybrid assemblies for the other two isolates, if you did not make them
-cp -n $SHARED/precomputed/02_assembly/hybrid/*.hybrid.fasta $COURSE/assemblies/
+cp -n $PRECOMPUTED/02_assembly/hybrid/*.hybrid.fasta $COURSE/assemblies/
 
 mkdir -p $COURSE/best
 for f in $COURSE/assemblies/*.fasta; do

@@ -51,8 +51,9 @@ lost too often to follow the same history.
 use_tools phylo
 mkdir -p $RESULTS/06_phylogeny/ST39 && cd $RESULTS/06_phylogeny/ST39
 
-# The chromosome is the longest sequence
-seqkit sort -l -r $COURSE/assemblies/CHI11E.hybrid.fasta | seqkit head -n 1 > ref_CHI11E_chromosome.fasta
+# The chromosome is the longest sequence. Take it from the trainers' CHI11E hybrid assembly, so that your Snippy
+# results and the trainers' (6.3) use exactly the same reference.
+seqkit sort -l -r $PRECOMPUTED/02_assembly/hybrid/CHI11E.hybrid.fasta | seqkit head -n 1 > ref_CHI11E_chromosome.fasta
 seqkit stats ref_CHI11E_chromosome.fasta
 ```
 
@@ -68,11 +69,15 @@ seqkit stats ref_CHI11E_chromosome.fasta
 ```bash
 ST39="CAA65Z CAA99X CAA47J CAA4X5 CAA574 CAA5XX CAA5YM CAA4GD D29438 BKR8JH BHB7VE CHI11E"
 
-for s in $ST39; do
+# Your practice isolates (all three are ST39): 20-45 minutes each with 1 thread
+for s in $PRACTICE; do
     snippy --outdir snippy/$s --ref ref_CHI11E_chromosome.fasta \
         --R1 $COURSE/trimmed/${s}_R1.fastq.gz --R2 $COURSE/trimmed/${s}_R2.fastq.gz \
         --cpus $THREADS --force
 done
+# The other nine ST39 isolates, from the trainers (same reference, same command)
+use_precomputed 06_phylogeny/ST39/snippy
+ls snippy | wc -l      # 12
 
 # How many SNPs did each isolate have against the reference?
 for s in $ST39; do echo -e "$s\t$(grep -c -v '^CHROM' snippy/$s/snps.tab)"; done

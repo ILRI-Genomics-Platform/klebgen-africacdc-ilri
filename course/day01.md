@@ -81,8 +81,8 @@ Host hpc.ilri.cgiar.org
 > ```
 >
 > You do not need to run `use_tools` again: a course tool you type is found and run from its image for you
-> (section 0.3). Then check which outputs exist (`ls`), run the unfinished step again for the samples that
-> are missing, or copy the trainers' pre-computed results for that step from `$SHARED/precomputed/`.
+> (section 0.3). Then check which outputs exist (`ls`), and run the unfinished step again for your practice
+> isolates, or copy the trainers' results for it with `use_precomputed` (section 0.5).
 > The long steps by hand (the Shovill and Autocycler assemblies on Day 2) offer pre-computed results. For a
 > pipeline run (Days 5 and 10), go back to the same folder and run the same `nextflow run` command with
 > `-resume` added: Nextflow reuses every step that had finished and only redoes the rest.
@@ -107,6 +107,7 @@ export COURSE=$HOME/neonatal-amr-course
 export READS=$COURSE/reads
 export RESULTS=$COURSE/results
 export THREADS=1          # CPU threads per command: 1 in the course's interactive sessions
+export PRACTICE="CHI11E BHB7VE CAA65Z"   # the isolates you run slow steps on yourself (use_precomputed for the rest)
 # Site config for running the pipeline (Day 5 and Day 10): your trainer will tell you which
 export SITE_CONFIG=$SHARED/neonatal-amr-nf/conf/slurm.config
 
@@ -326,6 +327,29 @@ stops with an error if a sample ID is repeated.
 
 </details>
 
+### 0.5 Practice isolates and pre-computed results
+
+Some steps take minutes per sample, and with 1 CPU each, running them on all 29 isolates would take most of a
+day. So for each slow step you **run the command yourself on three practice isolates**, `$PRACTICE`
+(`CHI11E`, `BHB7VE`, `CAA65Z`: three ST39 isolates; `CHI11E` also has Nanopore reads), then **copy the
+trainers' results for the other isolates**. The trainers ran exactly the same commands on every sample, and their
+results sit in the same folders as yours, so the next step finds everything where it expects it:
+
+```bash
+echo $PRACTICE                    # CHI11E BHB7VE CAA65Z
+use_precomputed 01_qc/kraken2     # copies $SHARED/precomputed/01_qc/kraken2 into $RESULTS/01_qc/kraken2
+use_precomputed                   # lists what is available
+```
+
+`use_precomputed` never overwrites a file you made yourself, so it is safe to run at any time, including after a
+disconnect. Where a tool writes one table for all samples (Kleborate, CheckM2, Kaptive), you write your
+practice run to a separate `..._practice` file, compare your rows with the trainers' table, and then use the
+trainers' table for the rest of the exercise.
+
+> [!TIP]
+> Time to spare? Run a step on more isolates: put their names in place of `$PRACTICE`, e.g.
+> `for s in $PRACTICE CES13U D38119; do ...`.
+
 ---
 
 ## Module 1: Read quality control
@@ -335,8 +359,14 @@ stops with an error if a sample ID is repeated.
 ```bash
 use_tools qc
 mkdir -p $RESULTS/01_qc
-seqkit stats -a -T -j $THREADS $READS/*.fastq.gz > $RESULTS/01_qc/read_stats.tsv
-cut -f1,4,5,7,13 $RESULTS/01_qc/read_stats.tsv | head
+# Your practice isolates
+seqkit stats -a -T -j $THREADS $(for s in $PRACTICE; do ls $READS/${s}_*.fastq.gz; done) \
+    > $RESULTS/01_qc/read_stats_practice.tsv
+cut -f1,4,5,7,13 $RESULTS/01_qc/read_stats_practice.tsv
+
+# The same table for every sample, from the trainers: check that your rows match it
+use_precomputed 01_qc/read_stats.tsv
+grep -E "$(echo $PRACTICE | tr ' ' '|')" $RESULTS/01_qc/read_stats.tsv | cut -f1,4,5,7,13
 ```
 
 Estimate **sequencing depth** for each Illumina sample: total bases in R1 and R2 divided by genome size
@@ -362,15 +392,17 @@ mkdir -p $RESULTS/01_qc/fastqc $RESULTS/01_qc/fastp $COURSE/trimmed
 # FastQC on two samples first, to learn the report
 fastqc -t $THREADS -o $RESULTS/01_qc/fastqc $READS/CAA65Z_R{1,2}.fastq.gz $READS/CES13U_R{1,2}.fastq.gz
 
-# Trim every sample
-for r1 in $READS/*_R1.fastq.gz; do
-    s=$(basename $r1 _R1.fastq.gz)
+# Trim your practice isolates
+for s in $PRACTICE; do
     fastp -i $READS/${s}_R1.fastq.gz -I $READS/${s}_R2.fastq.gz \
           -o $COURSE/trimmed/${s}_R1.fastq.gz -O $COURSE/trimmed/${s}_R2.fastq.gz \
           --qualified_quality_phred 20 --length_required 50 \
           -j $RESULTS/01_qc/fastp/${s}.fastp.json -h $RESULTS/01_qc/fastp/${s}.fastp.html \
           -w $THREADS 2>&1 | tee $RESULTS/01_qc/fastp/${s}.log
 done
+
+# fastp reports for the other samples, from the trainers (their trimmed reads are not needed later)
+use_precomputed 01_qc/fastp
 
 # One report for all samples
 multiqc $RESULTS/01_qc -o $RESULTS/01_qc/multiqc
@@ -385,11 +417,12 @@ Open `$RESULTS/01_qc/multiqc/multiqc_report.html` in your browser and look at:
 
 ### 1.3 Nanopore: NanoPlot and Filtlong
 
-Only the three hybrid isolates have Nanopore reads.
+Only the three hybrid isolates have Nanopore reads. You process `CHI11E` (the hybrid isolate in your practice
+set, assembled on Day 2); the trainers' reports cover `CNS1F1` and `1013757`.
 
 ```bash
 mkdir -p $RESULTS/01_qc/nanoplot
-for s in CHI11E CNS1F1 1013757; do
+for s in CHI11E; do
     NanoPlot --fastq $READS/${s}_ont.fastq.gz -o $RESULTS/01_qc/nanoplot/${s}_raw -t $THREADS
 
     filtlong --min_length 1000 --keep_percent 90 $READS/${s}_ont.fastq.gz \
@@ -397,6 +430,7 @@ for s in CHI11E CNS1F1 1013757; do
 
     NanoPlot --fastq $COURSE/trimmed/${s}_ont.fastq.gz -o $RESULTS/01_qc/nanoplot/${s}_filtered -t $THREADS
 done
+use_precomputed 01_qc/nanoplot          # CNS1F1 and 1013757
 grep -E "Read length N50|Mean read quality|Total bases" $RESULTS/01_qc/nanoplot/*/NanoStats.txt
 ```
 
@@ -416,14 +450,14 @@ mkdir -p $RESULTS/01_qc/kraken2
 KDB=$SHARED/databases/kraken2          # Kraken2 Standard-8, with Bracken files (needs ~8 GB of memory)
 cat $KDB/VERSION                       # record the database version with your results
 
-for r1 in $COURSE/trimmed/*_R1.fastq.gz; do
-    s=$(basename $r1 _R1.fastq.gz)
+for s in $PRACTICE; do                 # each takes 5-15 minutes with 1 thread
     kraken2 --db $KDB --threads $THREADS --paired \
         --report $RESULTS/01_qc/kraken2/${s}.k2report --output /dev/null \
         $COURSE/trimmed/${s}_R1.fastq.gz $COURSE/trimmed/${s}_R2.fastq.gz
     bracken -d $KDB -i $RESULTS/01_qc/kraken2/${s}.k2report \
         -o $RESULTS/01_qc/kraken2/${s}.bracken.tsv -l S -r 150
 done
+use_precomputed 01_qc/kraken2          # every other sample, including the two QC failures
 
 # Top three species per sample
 for f in $RESULTS/01_qc/kraken2/*.bracken.tsv; do

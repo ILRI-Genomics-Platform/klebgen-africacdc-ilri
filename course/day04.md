@@ -184,16 +184,19 @@ IncX3 with *bla*NDM-5.
 use_tools plasmids
 mkdir -p $RESULTS/05_plasmids
 
-for s in CHI11E CNS1F1 1013757; do
-    mob_recon --infile $COURSE/assemblies/${s}.hybrid.fasta \
-        --outdir $RESULTS/05_plasmids/hybrid/$s -n $THREADS
-    mob_recon --infile $COURSE/assemblies/${s}.fasta \
-        --outdir $RESULTS/05_plasmids/shortread/$s -n $THREADS
-done
+# CHI11E yourself (the hybrid isolate in your practice set), both assemblies
+s=CHI11E
+mob_recon --infile $COURSE/assemblies/${s}.hybrid.fasta --outdir $RESULTS/05_plasmids/hybrid/$s -n $THREADS
+mob_recon --infile $COURSE/assemblies/${s}.fasta --outdir $RESULTS/05_plasmids/shortread/$s -n $THREADS
 
-for d in $RESULTS/05_plasmids/*/*/; do
-    echo "== $d"
-    pick '^size$|^rep_type\(s\)$|^predicted_mobility$|^primary_cluster_id$' $d/mobtyper_results.txt
+# CNS1F1 and 1013757 from the trainers (this also brings the short-read results for all isolates, used tomorrow)
+use_precomputed 05_plasmids/hybrid 05_plasmids/shortread
+
+for s in CHI11E CNS1F1 1013757; do
+    for t in hybrid shortread; do
+        echo "== $s $t"
+        pick '^size$|^rep_type\(s\)$|^predicted_mobility$|^primary_cluster_id$' $RESULTS/05_plasmids/$t/$s/mobtyper_results.txt
+    done
 done
 ```
 

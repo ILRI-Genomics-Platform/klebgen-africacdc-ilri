@@ -40,8 +40,13 @@ use_tools typing
 kleborate --version
 mkdir -p $RESULTS/03_typing
 
-kleborate -a $COURSE/best/*.fasta -o $RESULTS/03_typing/kleborate -p kpsc
-ls $RESULTS/03_typing/kleborate
+# Your practice isolates (about a minute each)
+kleborate -a $(for s in $PRACTICE; do echo $COURSE/best/$s.fasta; done) \
+    -o $RESULTS/03_typing/kleborate_practice -p kpsc
+ls $RESULTS/03_typing/kleborate_practice
+
+# The trainers' table for all 29 isolates, used in the exercises below
+use_precomputed 03_typing/kleborate
 ```
 
 Kleborate writes one wide table. The `pick` function from your Day 1 setup prints just the columns whose names
@@ -51,6 +56,8 @@ match a pattern:
 K=$RESULTS/03_typing/kleborate/klebsiella_pneumo_complex_output.txt
 head -1 $K | tr '\t' '\n' | head -30      # list the column names
 pick 'species$|__ST$' $K
+# Your practice rows should match the trainers' rows for the same isolates
+pick 'species$|__ST$' $RESULTS/03_typing/kleborate_practice/klebsiella_pneumo_complex_output.txt
 ```
 
 ### 3.2 Exercise: species
@@ -153,11 +160,13 @@ AMRDB=$SHARED/databases/amrfinderplus/latest
 amrfinder -d $AMRDB --database_version
 mkdir -p $RESULTS/04_amr/amrfinderplus
 
-for f in $COURSE/best/*.fasta; do
-    s=$(basename $f .fasta)
+for s in $PRACTICE; do                     # your practice isolates; the rest from the trainers below
+    f=$COURSE/best/$s.fasta
     amrfinder -n $f --organism Klebsiella_pneumoniae --plus --name $s \
         -d $AMRDB --threads $THREADS -o $RESULTS/04_amr/amrfinderplus/${s}.tsv
 done
+use_precomputed 04_amr/amrfinderplus
+ls $RESULTS/04_amr/amrfinderplus | wc -l    # 29
 
 # All results in one table (one header line)
 awk 'FNR==1 && NR!=1 {next} {print}' $RESULTS/04_amr/amrfinderplus/*.tsv > $RESULTS/04_amr/amrfinderplus_all.tsv

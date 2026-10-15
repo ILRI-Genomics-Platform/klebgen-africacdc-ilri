@@ -32,6 +32,11 @@ Each day page follows the same layout:
 | **Check your understanding** | Questions; click a question to reveal the answer |
 | **End-of-day checklist** | Tick these off before you leave |
 
+**Practice isolates.** Slow steps are run on three practice isolates, `$PRACTICE` (`CHI11E`, `BHB7VE`,
+`CAA65Z`), so that they finish within a session on 1 CPU. The trainers ran the same commands on all 29
+isolates; `use_precomputed <folder>` copies their results into your `$RESULTS` without touching your own
+([Day 1, section 0.5](day01.md#05-practice-isolates-and-pre-computed-results)).
+
 You will also see these boxes:
 
 > [!NOTE]
