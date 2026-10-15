@@ -50,7 +50,7 @@ workflow PHYLOGENY {
     ch_kleborate        // [ meta, kleborate.txt ]
     grouping            // 'kleborate' or 'samplesheet'
     reference_sheet     // CSV species,st,name,accession (kleborate mode)
-    reference_dir       // folder with <accession>.fasta (kleborate mode)
+    reference_dir       // folder with <accession>.fasta, and optionally <accession>.gbk (kleborate mode)
     phylo_references    // CSV group,fasta or null (samplesheet mode)
     min_group_size      // groups smaller than this are skipped
     method              // 'snippy', 'ska2' or 'both'
@@ -76,17 +76,24 @@ workflow PHYLOGENY {
                 }
                 def group = "${speciesLabel(typing.species)}_${st}".replaceAll(/[^A-Za-z0-9_-]/, '')
                 def fasta = file("${reference_dir}/${ref.accession}.fasta", checkIfExists: true)
-                return [[meta + [phylo_group: group, kleborate_species: typing.species, kleborate_st: st], reads, ref, fasta]]
+                // Snippy takes the GenBank file when there is one (bin/fetch_references.py), so that it reports the
+                // gene and effect of each variant; SKA2 and snippy-core use the FASTA (the same sequence)
+                def gbk = file("${reference_dir}/${ref.accession}.gbk")
+                def snippyRef = gbk.exists() ? gbk : fasta
+                return [[meta + [phylo_group: group, kleborate_species: typing.species, kleborate_st: st], reads, ref, fasta, snippyRef]]
             }
 
-        ch_reads_grouped = ch_grouped.map { meta, reads, _ref, _fasta -> [meta, reads] }
-        ch_refs = ch_grouped
-            .map { meta, _reads, ref, fasta -> [meta.phylo_group, ref.name, ref.accession, fasta] }
+        ch_reads_grouped = ch_grouped.map { meta, reads, _ref, _fasta, _snippyRef -> [meta, reads] }
+        ch_ref_rows = ch_grouped
+            .map { meta, _reads, ref, fasta, snippyRef -> [meta.phylo_group, ref.name, ref.accession, fasta, snippyRef] }
             .unique { item -> item[0] }
-            .map { group, name, acc, fasta ->
-                log.info "Phylogeny group ${group}: reference = ${name} (${acc})"
-                [group, fasta]
+            .map { group, name, acc, fasta, snippyRef ->
+                def annotated = snippyRef.name.endsWith('.gbk') ? ', annotated (GenBank) for Snippy' : ''
+                log.info "Phylogeny group ${group}: reference = ${name} (${acc})${annotated}"
+                [group, fasta, snippyRef]
             }
+        ch_refs        = ch_ref_rows.map { group, fasta, _snippyRef -> [group, fasta] }
+        ch_snippy_refs = ch_ref_rows.map { group, _fasta, snippyRef -> [group, snippyRef] }
     } else {
         // ---- samplesheet phylo_group column
         ch_reads_grouped = ch_short_reads.filter { meta, _reads -> meta.phylo_group }
@@ -114,6 +121,7 @@ workflow PHYLOGENY {
                     [group, fastas[best]]
                 }
         }
+        ch_snippy_refs = ch_refs
     }
 
     // ---- keep groups with enough isolates
@@ -157,7 +165,7 @@ workflow PHYLOGENY {
         ch_to_map = ch_reads_grouped
             .map { meta, reads -> [meta.phylo_group, meta, reads] }
             .combine(ch_kept_groups, by: 0)
-            .combine(ch_refs, by: 0)
+            .combine(ch_snippy_refs, by: 0)
             .branch { _group, meta, _reads, _ref ->
                 contigs: meta.input_type == 'assembly'
                 reads:   true

@@ -311,7 +311,7 @@ section 7.
 | `--amrfinderplus_db` | none | AMRFinderPlus database; omit to download the latest (its date is recorded) |
 | `--phylo_grouping` | `kleborate` | `kleborate` (species + ST from Kleborate) or `samplesheet` (`phylo_group` column) |
 | `--phylo_reference_sheet` | `conf/phylo_references.csv` | Reference genome per species / ST (kleborate mode) |
-| `--phylo_reference_dir` | `references/` (site configs: shared folder) | Folder with `<accession>.fasta`, filled by `bin/fetch_references.py` |
+| `--phylo_reference_dir` | `references/` (site configs: shared folder) | Folder with `<accession>.fasta` and, for Snippy's variant annotation, `<accession>.gbk`; filled by `bin/fetch_references.py` |
 | `--phylo_references` | none | Samplesheet mode: CSV `group,fasta`; by default each group's own best assembly (hybrid first, then fewest contigs) |
 | `--phylo_method` | `snippy` | `snippy` (map to the reference), `ska2` (split k-mers; also reference-free SNP distances), or `both` (to compare; SKA2 results in `<group>_ska2/`) |
 | `--phylo_min_group_size` | 3 | Smallest group analysed (2 or more). Groups of 3+ get Gubbins, a tree and SNP distances; a group of 2 gets SNP distances only |

@@ -409,6 +409,16 @@ bin/fetch_references.py --check                # what is present / missing (chan
 bin/fetch_references.py --group amr-course     # download from NCBI (ENA as fallback), then lock read-only
 ```
 
+For each accession the script saves `<accession>.fasta` and, from NCBI, the GenBank record of the same sequence
+with its annotation, `<accession>.gbk`. It checks that both have the same length and reports how many genes (CDS)
+the GenBank record holds. Snippy uses the `.gbk` as its reference, in the pipeline, on Day 6 and in
+`step_by_step/`, so that `snps.tab` names the gene and effect of each variant; `snippy-core`, SKA2 and Gubbins
+use the FASTA, so all coordinates match. If you already downloaded the FASTA files, running the script again adds
+the missing `.gbk` files. Without them everything still works; Snippy then only gives positions.
+
+The sheet lists one chromosome per species (for NTUH-K2044, AP006725.1), not a whole assembly: an assembly's
+GenBank file (`GCF_..._genomic.gbff`) also holds its plasmids, which do not belong in a core-genome alignment.
+
 To use a closer reference for one ST, add a row with that ST (e.g. a closed ST39 genome) to
 `conf/phylo_references.csv` and run the script again. Participants who want the course's own behaviour from
 Day 6 (groups from the samplesheet, the group's best own assembly as reference) can run the pipeline with
