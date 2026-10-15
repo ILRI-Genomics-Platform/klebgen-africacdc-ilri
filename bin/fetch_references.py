@@ -3,21 +3,16 @@
 fetch_references.py - download the phylogeny reference genomes once, into a shared read-only folder.
 
 The pipeline (--phylo_grouping kleborate, the default) maps each species/ST group to a reference listed in
-conf/phylo_references.csv and reads it from <dir>/<accession>.fasta. The GenBank record of the same accession,
-with its annotation, is saved as <dir>/<accession>.gbk: Snippy uses it as --reference, so that it reports the
-gene and effect of each variant (snps.tab); SKA2 and snippy-core use the FASTA, which is the same sequence.
-Run this once as the trainer, with network access (e.g. on the login node); participants and compute nodes
-only read the files.
+conf/phylo_references.csv and reads it from <dir>/<accession>.fasta. Run this once as the trainer, with
+network access (e.g. on the login node); participants and compute nodes only read the files.
 
     bin/fetch_references.py                         # download what is missing, then lock the folder
     bin/fetch_references.py --check                 # only report present / missing (changes nothing)
     bin/fetch_references.py --group amr-course      # readable only by this Unix group
     bin/fetch_references.py --dir /other/folder     # then pass the same --phylo_reference_dir to the pipeline
-    bin/fetch_references.py --no-genbank            # FASTA only (Snippy then reports no gene names)
 
-Sources: NCBI E-utilities (efetch), then ENA if NCBI fails (FASTA); NCBI only for GenBank (rettype gbwithparts:
-features and sequence). Writes MANIFEST.tsv (accession, name, species, length, contigs, md5, source, date,
-genbank_cds) next to the files.
+Sources: NCBI E-utilities (efetch), then ENA if NCBI fails. Writes MANIFEST.tsv (accession, name, species,
+length, contigs, md5, source, date) next to the FASTA files.
 """
 
 import argparse
@@ -75,57 +70,6 @@ def check_fasta(data, acc):
     return length, contigs
 
 
-GENBANK_URL = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi?db=nuccore&id={acc}&rettype=gbwithparts&retmode=text"
-
-
-def check_genbank(data, acc):
-    """Return (length, CDS features) or raise ValueError if this is not a GenBank record with its sequence."""
-    text = data.decode("ascii", errors="replace")
-    if not text.startswith("LOCUS"):
-        raise ValueError(f"not a GenBank record (starts with {text[:60]!r})")
-    if "\nORIGIN" not in text:
-        raise ValueError("the GenBank record has no sequence (ORIGIN)")
-    length, in_seq, cds = 0, False, 0
-    for line in text.splitlines():
-        if line.startswith("ORIGIN"):
-            in_seq = True
-        elif line.startswith("//"):
-            in_seq = False
-        elif in_seq:
-            length += sum(len(part) for part in line.split()[1:])
-        elif line.startswith("     CDS "):
-            cds += 1
-    if length < 100_000:
-        raise ValueError(f"only {length} bp of sequence in the GenBank record of {acc}")
-    return length, cds
-
-
-def download_genbank(acc):
-    errors = []
-    for attempt in (1, 2, 3):
-        try:
-            req = urllib.request.Request(GENBANK_URL.format(acc=acc), headers={"User-Agent": "neonatal-amr-nf"})
-            with urllib.request.urlopen(req, timeout=300) as resp:
-                data = resp.read()
-            length, cds = check_genbank(data, acc)
-            return data, length, cds
-        except Exception as exc:
-            errors.append(f"NCBI GenBank (attempt {attempt}): {exc}")
-            if isinstance(exc, ValueError):
-                break
-            time.sleep(3 * attempt)
-    raise RuntimeError("; ".join(errors))
-
-
-def write_file(path, data):
-    if os.path.exists(path):
-        os.chmod(path, 0o644)
-    tmp = path + ".part"
-    with open(tmp, "wb") as handle:
-        handle.write(data)
-    os.replace(tmp, path)
-
-
 def download(acc):
     errors = []
     for name, url in SOURCES:
@@ -166,7 +110,6 @@ def main():
     ap.add_argument("--force", action="store_true", help="download again even if the file exists")
     ap.add_argument("--group", help="make the files readable only by this Unix group")
     ap.add_argument("--no-lock", action="store_true", help="leave permissions unchanged")
-    ap.add_argument("--no-genbank", action="store_true", help="download the FASTA files only")
     args = ap.parse_args()
 
     rows = read_sheet(args.sheet)
@@ -177,16 +120,10 @@ def main():
     print(f"Reference sheet : {args.sheet} ({len(rows)} rows, {len(accessions)} genomes)")
     print(f"Reference folder: {folder}")
 
-    def need(acc, ext):
-        return args.force or not os.path.isfile(os.path.join(folder, f"{acc}.{ext}"))
-
-    missing_fasta = [a for a in accessions if need(a, "fasta")]
-    missing_gbk = [] if args.no_genbank else [a for a in accessions if need(a, "gbk")]
-    missing = [a for a in accessions if a in missing_fasta or a in missing_gbk]
+    missing = [a for a in accessions if args.force or not os.path.isfile(os.path.join(folder, f"{a}.fasta"))]
     for acc, row in accessions.items():
-        files = [f"{ext}: {'missing' if acc in miss else 'present'}"
-                 for ext, miss in (("fasta", missing_fasta), ("gbk", missing_gbk)) if ext == "fasta" or not args.no_genbank]
-        print(f"  {acc:14} {row['name']:16} {row['species']}{' ' + row['st'] if row['st'] else ''}  ({', '.join(files)})")
+        state = "missing" if acc in missing else "present"
+        print(f"  {state:8} {acc:14} {row['name']:16} {row['species']}{' ' + row['st'] if row['st'] else ''}")
     if args.check:
         sys.exit(1 if missing else 0)
     if not missing:
@@ -208,48 +145,36 @@ def main():
         failed = []
         for acc in missing:
             row = accessions[acc]
-            rec = manifest.setdefault(acc, {"accession": acc})
-            rec.update(name=row["name"], species=row["species"])
-            if acc in missing_fasta:
-                print(f"Downloading {acc} ({row['name']}), FASTA...", flush=True)
-                try:
-                    data, source, length, contigs = download(acc)
-                except RuntimeError as exc:
-                    print(f"  FAILED: {exc}", file=sys.stderr)
-                    failed.append(acc)
-                    continue
-                write_file(os.path.join(folder, f"{acc}.fasta"), data)
-                rec.update(length_bp=length, contigs=contigs, md5=hashlib.md5(data).hexdigest(), source=source,
-                           downloaded=datetime.date.today().isoformat())
-                print(f"  {length:,} bp in {contigs} sequence(s) from {source}")
-            if acc in missing_gbk:
-                print(f"Downloading {acc} ({row['name']}), GenBank with annotation...", flush=True)
-                try:
-                    data, length, cds = download_genbank(acc)
-                except RuntimeError as exc:
-                    print(f"  FAILED: {exc}", file=sys.stderr)
-                    failed.append(acc)
-                    continue
-                fasta_len = str(rec.get("length_bp", ""))
-                if fasta_len and fasta_len != str(length):
-                    print(f"  FAILED: the GenBank sequence ({length:,} bp) differs from the FASTA ({fasta_len} bp)",
-                          file=sys.stderr)
-                    failed.append(acc)
-                    continue
-                write_file(os.path.join(folder, f"{acc}.gbk"), data)
-                rec["genbank_cds"] = cds
-                note = "" if cds else "  WARNING: no CDS features: Snippy will not name genes for this reference"
-                print(f"  {length:,} bp, {cds:,} CDS features{note}")
+            print(f"Downloading {acc} ({row['name']})...", flush=True)
+            try:
+                data, source, length, contigs = download(acc)
+            except RuntimeError as exc:
+                print(f"  FAILED: {exc}", file=sys.stderr)
+                failed.append(acc)
+                continue
+            target = os.path.join(folder, f"{acc}.fasta")
+            if os.path.exists(target):
+                os.chmod(target, 0o644)
+            tmp = target + ".part"
+            with open(tmp, "wb") as handle:
+                handle.write(data)
+            os.replace(tmp, target)
+            manifest[acc] = {
+                "accession": acc, "name": row["name"], "species": row["species"], "length_bp": length,
+                "contigs": contigs, "md5": hashlib.md5(data).hexdigest(), "source": source,
+                "downloaded": datetime.date.today().isoformat(),
+            }
+            print(f"  {length:,} bp in {contigs} sequence(s) from {source}")
 
         with open(manifest_path, "w", newline="") as handle:
-            cols = ["accession", "name", "species", "length_bp", "contigs", "md5", "source", "downloaded", "genbank_cds"]
+            cols = ["accession", "name", "species", "length_bp", "contigs", "md5", "source", "downloaded"]
             writer = csv.DictWriter(handle, fieldnames=cols, delimiter="\t")
             writer.writeheader()
             for acc in sorted(manifest):
                 writer.writerow({c: manifest[acc].get(c, "") for c in cols})
         if failed:
-            sys.exit(f"ERROR: could not download {', '.join(sorted(set(failed)))}. Check the network (NCBI and ENA) "
-                     f"and the accession(s) in {args.sheet}, then run this script again.")
+            sys.exit(f"ERROR: could not download {', '.join(failed)}. Check the network (NCBI and ENA) and "
+                     f"the accession(s) in {args.sheet}, then run this script again.")
 
     if not args.no_lock and os.path.isdir(folder):
         lock(folder, args.group)

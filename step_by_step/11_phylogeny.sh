@@ -119,10 +119,7 @@ tree_and_distances() {   # tree_and_distances NAME DIR N_ISOLATES   (DIR holds N
 # ---------------------------------------------------------------- Snippy: map each isolate, then snippy-core
 snippy_group() {   # snippy_group GROUP REF SAMPLE...
     local g=$1 ref=$2; shift 2
-    local ids=("$@") gdir="${phy}/${g}" s snippy_ref
-    # As the pipeline: Snippy takes the reference's GenBank record (same sequence, with genes) when there is one,
-    # so that snps.tab names the gene and effect of each variant; snippy-core keeps the FASTA
-    snippy_ref=$ref; [ -s "${ref%.fasta}.gbk" ] && snippy_ref=${ref%.fasta}.gbk
+    local ids=("$@") gdir="${phy}/${g}" s
     mkdir -p "${gdir}/snippy"
     for s in "${ids[@]}"; do
         if [ -s "${gdir}/snippy/${s}/${s}.vcf" ]; then info "$s: Snippy already done"; continue; fi
@@ -131,13 +128,13 @@ snippy_group() {   # snippy_group GROUP REF SAMPLE...
             step "11b Snippy (reads -> ${g} reference): $s"
             run SNIPPY_RUN snippy \
                 --cpus "${THREADS}" --ram "${MEM_GB}" \
-                --outdir "$s" --reference "$snippy_ref" --prefix "$s" \
+                --outdir "$s" --reference "$ref" --prefix "$s" \
                 --R1 "$(trimmed_r1 "$s")" --R2 "$(trimmed_r2 "$s")" --force
         else
             step "11b Snippy (contigs -> ${g} reference): $s"
             run SNIPPY_CONTIGS snippy \
                 --cpus "${THREADS}" --ram "${MEM_GB}" \
-                --outdir "$s" --reference "$snippy_ref" --prefix "$s" \
+                --outdir "$s" --reference "$ref" --prefix "$s" \
                 --ctgs "$(best_assembly "$s")" --force
         fi
     done

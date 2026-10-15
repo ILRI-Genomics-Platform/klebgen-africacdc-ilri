@@ -63,17 +63,10 @@ pick '(^|__)species$' $K | grep -wE "$(echo $ST39 | tr ' ' '|')"
 grep -v '^#' $SHARED/neonatal-amr-nf/conf/phylo_references.csv | grep '^Klebsiella pneumoniae,'
 #    Klebsiella pneumoniae,,NTUH-K2044,AP006725.1
 
-# 3. The trainers downloaded it once into $SHARED/references, as FASTA and as GenBank (the same sequence,
-#    plus its annotation: genes and what they code for)
+# 3. The trainers downloaded it once into $SHARED/references
 cp $SHARED/references/AP006725.1.fasta ref_NTUH-K2044.fasta
-cp $SHARED/references/AP006725.1.gbk   ref_NTUH-K2044.gbk
 seqkit stats ref_NTUH-K2044.fasta          # one sequence, about 5.25 Mb
-grep -c "^     CDS " ref_NTUH-K2044.gbk   # annotated genes
 ```
-
-Snippy gets the **GenBank** file: with the annotation it reports, for every variant, the gene it falls in and its
-effect (synonymous, missense, ...). The alignment steps (`snippy-core`, SKA2) use the FASTA, which is the same
-sequence, so their coordinates match.
 
 <details>
 <summary><b>Would a reference from ST39 itself be better?</b></summary>
@@ -92,16 +85,13 @@ individual distances can. The pipeline takes an ST-specific reference from a row
 ```bash
 # Your practice isolates (all three are ST39): 20-45 minutes each with 1 thread
 for s in $PRACTICE; do
-    snippy --outdir snippy/$s --ref ref_NTUH-K2044.gbk \
+    snippy --outdir snippy/$s --ref ref_NTUH-K2044.fasta \
         --R1 $COURSE/trimmed/${s}_R1.fastq.gz --R2 $COURSE/trimmed/${s}_R2.fastq.gz \
         --cpus $THREADS --force
 done
 # The other nine ST39 isolates, from the trainers (same reference, same command)
 use_precomputed 06_phylogeny/ST39/snippy
 ls snippy | wc -l      # 12
-
-# Variants with their gene and effect (columns: position, type, effect, gene, product)
-cut -f2,3,11,13,14 snippy/CHI11E/snps.tab | head
 
 # How many SNPs did each isolate have against the reference?
 for s in $ST39; do echo -e "$s\t$(grep -c -v '^CHROM' snippy/$s/snps.tab)"; done

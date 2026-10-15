@@ -308,26 +308,10 @@ if want snippy; then
     if [ ! -s "$ref" ]; then
         cp "$SHARED/references/${ref_acc}.fasta" "$ref" || fail "snippy reference ($SHARED/references/${ref_acc}.fasta: run bin/fetch_references.py, section 7.4)"
     fi
-    # Snippy takes the GenBank record (same sequence, with genes) when there is one, as on the Day 6 page
-    snippy_ref=$ref
-    if [ -s "$SHARED/references/${ref_acc}.gbk" ]; then
-        cpn "$SHARED/references/${ref_acc}.gbk" "$D/ref_${ref_name}.gbk"; snippy_ref=$D/ref_${ref_name}.gbk
-    else
-        echo "WARNING: no $SHARED/references/${ref_acc}.gbk (bin/fetch_references.py): Snippy will not name genes" >&2
-    fi
-    # Results made with another reference file (e.g. the FASTA, before the GenBank record was downloaded) are redone,
-    # with everything built from them: one alignment must not mix annotated and unannotated runs
-    # (the record of which file was used sits beside snippy/, never in it: snippy-core reads every entry of snippy/*)
-    if [ -n "$(ls -A "$D/snippy" 2>/dev/null)" ] && [ "$(cat "$D/.snippy_reference" 2>/dev/null)" != "$(basename "$snippy_ref")" ]; then
-        echo "Snippy results in $D were made with another reference file: redoing them"
-        find "$D" -mindepth 1 -maxdepth 1 ! -name 'ref_*' -exec rm -rf {} +
-        mkdir -p "$D/snippy"
-    fi
-    basename "$snippy_ref" > "$D/.snippy_reference"
     for s in $kp; do
         [ -s "$D/snippy/$s/snps.tab" ] && continue
         ensure_trimmed "$s" || { fail "snippy:$s (fastp)"; continue; }
-        snippy --outdir "$D/snippy/$s" --ref "$snippy_ref" \
+        snippy --outdir "$D/snippy/$s" --ref "$ref" \
             --R1 "$WORK/trimmed/${s}_R1.fastq.gz" --R2 "$WORK/trimmed/${s}_R2.fastq.gz" \
             --cpus "$THREADS" --force && ran_here || fail "snippy:$s"
         rm -f "$D/snippy/$s"/*.bam "$D/snippy/$s"/*.bam.bai      # large; snippy-core does not need them
@@ -337,7 +321,7 @@ fi
 # The rest of Day 6, 6.4-6.7, with the page's commands and file names (in $D, like the participants)
 if want phylo && [ ! -s "$D/ST39_pairs.tsv" ]; then
     step "Core alignment, Gubbins, IQ-TREE and SNP distances (ST39)"
-    ref=$(ls "$D"/ref_*.fasta 2>/dev/null | head -1)          # snippy-core: the FASTA
+    ref=$(ls "$D"/ref_*.fasta 2>/dev/null | head -1)
     if [ -z "$ref" ] || [ -z "$(ls -d "$D"/snippy/*/ 2>/dev/null)" ]; then
         fail "phylo (no Snippy results: run the snippy step first)"
     else
