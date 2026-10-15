@@ -437,17 +437,21 @@ mirrors a participant's `$RESULTS`, folder for folder, and `use_precomputed 01_q
 | `03_typing/kleborate/` | Kleborate on every best assembly | practice isolates | 3 |
 | `04_amr/amrfinderplus/<sample>.tsv` | AMRFinderPlus, one file per isolate | practice isolates | 3 |
 | `05_plasmids/hybrid/<sample>/`, `05_plasmids/shortread/<sample>/` | MOB-suite on hybrid and Shovill assemblies | `CHI11E` | 4–5 |
-| `06_phylogeny/ST39/snippy/<sample>/` | Snippy against the `CHI11E` chromosome, 12 ST39 isolates | practice isolates | 6 |
+| `06_phylogeny/ST39/snippy/<sample>/` | Snippy against NTUH-K2044 (the *K. pneumoniae* reference in `conf/phylo_references.csv`), 12 ST39 isolates | practice isolates | 6 |
+| `06_phylogeny/ST39/` | core alignment, Gubbins, IQ-TREE, SNP distances, pair table; SKA2 (`ST39_ska.skf`, `ST39_ska_distances.tsv`) | all 12 (the pre-computed copy is a fallback) | 6 |
 | `07_antigens/kaptive_k.tsv`, `kaptive_o.tsv` | Kaptive on every best assembly | practice isolates | 8 |
 | `pipeline_results/` | full pipeline run, training set | | 5 |
 | `capstone/precomputed/` (beside `precomputed/`) | full pipeline run, capstone set | | 10 |
 
-Steps that are quick with 1 CPU stay on all isolates: QUAST, MultiQC, SKA2 on the ST39 group, Gubbins, IQ-TREE,
-and the plasmid and gene searches on the three hybrid isolates.
+Steps that are quick with 1 CPU stay on all isolates: QUAST, MultiQC, the plasmid and gene searches on the three
+hybrid isolates, and, on Day 6, the core alignment, Gubbins, IQ-TREE and SKA2 for the ST39 group. Day 6 also
+has a pre-computed copy of those (`use_precomputed 06_phylogeny/ST39`) for anyone who falls behind.
 
 To change the practice set (for example to fit a shorter course), change `PRACTICE` in the Day 1 set-up block.
 Choose ST39 isolates, so that every one can be used in the Day 6 phylogeny, and keep `CHI11E`, the hybrid
-isolate used on Day 2.
+isolate used on Day 2. Day 6 maps to the reference that `conf/phylo_references.csv` lists for the isolates'
+Kleborate species (NTUH-K2044, AP006725.1, for *K. pneumoniae*), as the pipeline does; `$SHARED/references` must
+hold it (section 7.4). If you add an ST39-specific row to the sheet, change the file name on the Day 6 page too.
 
 ### 8.1 Run the pipeline
 
@@ -482,7 +486,7 @@ database as the course page, and only renames files or adjusts columns to the co
 
 | From the pipeline run (reused) | Made by the script (the course page's own command) |
 | --- | --- |
-| fastp reports; Kraken2 reports; Shovill, Autocycler and hybrid assemblies; Kleborate and Kaptive tables (merged into one table each); AMRFinderPlus tables (with the `Name` column the course's `--name` adds); MOB-suite on each best assembly | seqkit stats; NanoPlot and Filtlong (3 hybrid isolates); Bracken (the course uses `-r 150`, the pipeline its defaults); CheckM2; MOB-suite on the Shovill assemblies of the 3 hybrid isolates; fastp and Snippy for the 12 ST39 isolates (the pipeline maps to a different reference) |
+| fastp reports; Kraken2 reports; Shovill, Autocycler and hybrid assemblies; Kleborate and Kaptive tables (merged into one table each); AMRFinderPlus tables (with the `Name` column the course's `--name` adds); MOB-suite on each best assembly | seqkit stats; NanoPlot and Filtlong (3 hybrid isolates); Bracken (the course uses `-r 150`, the pipeline its defaults); CheckM2; MOB-suite on the Shovill assemblies of the 3 hybrid isolates; fastp and Snippy for the 12 ST39 isolates (same reference as the pipeline, but the pipeline does not keep the per-isolate alignments that `snippy-core` needs), then the Day 6 core alignment, Gubbins, IQ-TREE and SNP distances; SKA2 from the best assemblies (the pipeline's SKA2 used the reads) |
 
 If a pipeline result is missing for a sample, the script runs the course's command for that sample instead.
 
@@ -512,7 +516,7 @@ Planning estimates, not measurements: run 3 isolates first and scale from Nextfl
 | --- | --- | --- |
 | Training set (29 isolates) | about 4–5 h | about 2.5–3 h |
 | Capstone set (5 test isolates, 1 hybrid) | about 2–3 h (the hybrid assembly sets the pace) | about 1.5–2 h |
-| `make_precomputed.sh` after the pipeline run (16 CPUs) | about 2–3 h (Snippy and CheckM2 take most of it) | the same: it runs as one 16-CPU job |
+| `make_precomputed.sh` after the pipeline run (16 CPUs) | about 2–3 h (Snippy, CheckM2 and Gubbins take most of it) | the same: it runs as one 16-CPU job |
 
 ## 9. Known gaps and decisions for you
 

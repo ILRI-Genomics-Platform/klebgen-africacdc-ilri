@@ -43,35 +43,49 @@ Today you analyse all 12 ST39 isolates together:
 
 ### 6.2 Choose a reference
 
-The closer the reference, the more of the genome you can compare. A closed genome from the same ST is ideal, and
-you made one on Day 2: the `CHI11E` hybrid assembly. Use its **chromosome only**, because plasmids are gained and
-lost too often to follow the same history.
+Snippy needs one reference genome for the whole group, from the same species. Choose it the way the pipeline
+does: take each isolate's **species from Kleborate** (Day 3), then the reference listed for that species in the
+pipeline's reference sheet, `conf/phylo_references.csv`. For *Klebsiella pneumoniae* that is **NTUH-K2044**
+(accession AP006725.1): a complete, well-annotated chromosome (no plasmids, which are gained and lost too often
+to follow the same history). Using the same reference as the pipeline also means you can compare your tree with
+the pipeline's `Kpneumoniae_ST39` results.
 
 ```bash
 use_tools phylo
 mkdir -p $RESULTS/06_phylogeny/ST39 && cd $RESULTS/06_phylogeny/ST39
+ST39="CAA65Z CAA99X CAA47J CAA4X5 CAA574 CAA5XX CAA5YM CAA4GD D29438 BKR8JH BHB7VE CHI11E"
 
-# The chromosome is the longest sequence. Take it from the trainers' CHI11E hybrid assembly, so that your Snippy
-# results and the trainers' (6.3) use exactly the same reference.
-seqkit sort -l -r $PRECOMPUTED/02_assembly/hybrid/CHI11E.hybrid.fasta | seqkit head -n 1 > ref_CHI11E_chromosome.fasta
-seqkit stats ref_CHI11E_chromosome.fasta
+# 1. Species of the ST39 isolates, from Kleborate: all should be Klebsiella pneumoniae
+K=$RESULTS/03_typing/kleborate/klebsiella_pneumo_complex_output.txt
+pick '(^|__)species$' $K | grep -wE "$(echo $ST39 | tr ' ' '|')"
+
+# 2. The reference for that species (an ST39 row, if there were one, would be used instead)
+grep -v '^#' $SHARED/neonatal-amr-nf/conf/phylo_references.csv | grep '^Klebsiella pneumoniae,'
+#    Klebsiella pneumoniae,,NTUH-K2044,AP006725.1
+
+# 3. The trainers downloaded it once into $SHARED/references
+cp $SHARED/references/AP006725.1.fasta ref_NTUH-K2044.fasta
+seqkit stats ref_NTUH-K2044.fasta          # one sequence, about 5.25 Mb
 ```
 
-> [!NOTE]
-> **How the pipeline chooses references.** By default it groups isolates by Kleborate's species and ST
-> (`Kpneumoniae_ST39`) and uses one reference per species from `conf/phylo_references.csv`: NTUH-K2044 (ST23)
-> for *K. pneumoniae*. That works for every ST without preparation, but a reference from another ST leaves out
-> genes your lineage has and NTUH-K2044 lacks, so the core genome is smaller than with CHI11E. Adding an
-> `ST39` row to the sheet gives the pipeline the same choice you are making by hand here.
+<details>
+<summary><b>Would a reference from ST39 itself be better?</b></summary>
+
+Usually, yes. NTUH-K2044 belongs to ST23. Genes that ST39 has and NTUH-K2044 lacks cannot be compared, so the core
+genome is smaller than with an ST39 reference, such as the chromosome of your `CHI11E` hybrid assembly. Within one
+ST the SNPs that separate isolates mostly fall in genes both share, so cluster conclusions rarely change, though
+individual distances can. The pipeline takes an ST-specific reference from a row with that ST in
+`conf/phylo_references.csv` (the sheet ends with an example); the trainers then download it with
+`bin/fetch_references.py`.
+
+</details>
 
 ### 6.3 Map reads and call SNPs with Snippy
 
 ```bash
-ST39="CAA65Z CAA99X CAA47J CAA4X5 CAA574 CAA5XX CAA5YM CAA4GD D29438 BKR8JH BHB7VE CHI11E"
-
 # Your practice isolates (all three are ST39): 20-45 minutes each with 1 thread
 for s in $PRACTICE; do
-    snippy --outdir snippy/$s --ref ref_CHI11E_chromosome.fasta \
+    snippy --outdir snippy/$s --ref ref_NTUH-K2044.fasta \
         --R1 $COURSE/trimmed/${s}_R1.fastq.gz --R2 $COURSE/trimmed/${s}_R2.fastq.gz \
         --cpus $THREADS --force
 done
@@ -84,13 +98,15 @@ for s in $ST39; do echo -e "$s\t$(grep -c -v '^CHROM' snippy/$s/snps.tab)"; done
 ```
 
 > [!NOTE]
-> `CHI11E` mapped to its own chromosome should give close to **zero** SNPs. If it does not, something is wrong
-> with the reads, the reference or the settings: a useful built-in check.
+> Every isolate has many thousands of SNPs against NTUH-K2044, because the reference belongs to another lineage
+> (ST23). That is expected: what matters is how the ST39 isolates differ **from each other**, after the core
+> alignment. All 12 should have similar counts; an isolate with far more or far fewer than the rest needs a
+> closer look (coverage, contamination, wrong ST).
 
 ### 6.4 Core alignment
 
 ```bash
-snippy-core --ref ref_CHI11E_chromosome.fasta --prefix core snippy/*
+snippy-core --ref ref_NTUH-K2044.fasta --prefix core snippy/*
 cat core.txt                    # per-isolate: aligned length and how much is missing
 snippy-clean_full_aln core.full.aln > clean.full.aln
 ```
@@ -174,6 +190,11 @@ for t in within_cluster cluster_vs_other other_vs_other; do
 done
 ```
 
+> [!TIP]
+> **Fell behind, or a step failed?** The trainers ran 6.3–6.8 on all 12 isolates with the same reference and
+> commands. `use_precomputed 06_phylogeny/ST39` copies every file you do not have yet (core alignment, Gubbins,
+> IQ-TREE, SNP distances, SKA2) into this folder and keeps the ones you made.
+
 ### 6.8 A reference-free check: SKA2
 
 Snippy compares isolates only where they map to the reference. **SKA2** (split k-mer analysis) needs no
@@ -184,11 +205,12 @@ reads or assemblies, and is well suited to closely related isolates such as one 
 ```bash
 use_tools phylo
 cd $RESULTS/06_phylogeny/ST39
-ST39="CAA65Z CAA99X CAA47J CAA4X5 CAA574 CAA5XX CAA5YM CAA4GD D29438 BKR8JH BHB7VE CHI11E"   # as in 6.3
+ST39="CAA65Z CAA99X CAA47J CAA4X5 CAA574 CAA5XX CAA5YM CAA4GD D29438 BKR8JH BHB7VE CHI11E"   # as in 6.2
 
 # 1. Split k-mers of every isolate, from its best assembly: one line per isolate, name <tab> file
 for s in $ST39; do printf '%s\t%s\n' $s $COURSE/best/$s.fasta; done > ska_inputs.tsv
 ska build -f ska_inputs.tsv -o ST39_ska -k 31 --threads $THREADS
+#    (Short of time? use_precomputed 06_phylogeny/ST39/ST39_ska.skf 06_phylogeny/ST39/ST39_ska_distances.tsv)
 
 # 2. SNP distances between every pair of isolates (columns: Sample1, Sample2, Distance, Mismatches)
 ska distance ST39_ska.skf -o ST39_ska_distances.tsv
@@ -209,7 +231,7 @@ Several things pull in different directions:
 - **Recombination**: SKA2's distances are raw; Gubbins removed recombined regions from the Snippy distances. If
   a pair differs by a recombination event, SKA2's distance is larger.
 - **More genome**: SKA2 compares everything two isolates share, including genes and plasmids the reference
-  (CHI11E's chromosome) lacks, so it can find SNPs Snippy cannot see.
+  (NTUH-K2044's chromosome) lacks, so it can find SNPs Snippy cannot see.
 - **Fewer SNPs in dense regions**: a split k-mer needs 15 identical bases on each side, so SNPs close to another
   variant, and indels, are missed.
 

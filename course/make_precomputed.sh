@@ -25,10 +25,14 @@
 #   kleborate 03_typing/kleborate/                  per-sample tables, merged            -
 #   amr      04_amr/amrfinderplus/                  per-sample tables, + Name column     -
 #   plasmids 05_plasmids/{hybrid,shortread}/        MOB-suite on each best assembly      MOB-suite, Shovill assembly of 3 hybrid isolates
-#   snippy   06_phylogeny/ST39/snippy/              -  (the pipeline uses another reference)  fastp + Snippy, 12 ST39 isolates
+#   snippy   06_phylogeny/ST39/snippy/              -  (it keeps no Snippy alignments)  fastp + Snippy, 12 ST39 isolates, against
+#                                                                                        the reference for their Kleborate species
+#                                                                                        (conf/phylo_references.csv: NTUH-K2044)
+#   phylo    06_phylogeny/ST39/                     -                                    snippy-core, Gubbins, IQ-TREE, snp-dists (Day 6, 6.4-6.7)
+#   ska2     06_phylogeny/ST39/ST39_ska*            -  (it used reads, the course uses assemblies)  ska build, ska distance (Day 6, 6.8)
 #   kaptive  07_antigens/                           per-sample tables, merged            -
 # A step whose pipeline result is missing for a sample runs the course's command for that sample instead.
-# Expect about 2-3 hours with 16 CPUs (Snippy and CheckM2 take most of it).
+# Expect about 2-3 hours with 16 CPUs (Snippy, CheckM2 and Gubbins take most of it).
 #
 #SBATCH --job-name=amr-precomputed
 #SBATCH --partition=batch
@@ -44,10 +48,12 @@ P="${PRECOMPUTED:-$SHARED/precomputed}"                                      # w
 WORK="${WORK:-/var/scratch/global/$USER/neonatal-amr/precompute_work}"      # trimmed reads, links: not shared
 PIPE="${PIPE:-$P/pipeline_results}"                                          # the training pipeline run (section 8.1)
 SHEET="${SHEET:-$SHARED/samplesheet.csv}"
-STEPS="${STEPS:-reads fastp nanopore kraken2 assembly checkm2 kleborate amr plasmids snippy kaptive}"
+STEPS="${STEPS:-reads fastp nanopore kraken2 assembly checkm2 kleborate amr plasmids snippy phylo ska2 kaptive}"
 THREADS="${SLURM_CPUS_PER_TASK:-${THREADS:-4}}"
 HYBRIDS="CHI11E CNS1F1 1013757"
 ST39="CAA65Z CAA99X CAA47J CAA4X5 CAA574 CAA5XX CAA5YM CAA4GD D29438 BKR8JH BHB7VE CHI11E"   # as on Day 6
+CLUSTER="CAA65Z CAA99X CAA47J CAA4X5 CAA574 CAA5XX CAA5YM CAA4GD"                            # as on Day 6, 6.7
+REF_SHEET=$SHARED/neonatal-amr-nf/conf/phylo_references.csv
 KDB=$SHARED/databases/kraken2
 AMRDB=$SHARED/databases/amrfinderplus/latest
 
@@ -65,6 +71,16 @@ fail() { echo "FAILED: $*" >&2; failed="$failed $1"; }
 reused=0; ran=0
 from_pipeline() { reused=$((reused + 1)); }
 ran_here()      { ran=$((ran + 1)); }
+
+# cpn SRC... DEST : copy each SRC unless DEST (a file, or DEST/<name> for a folder) exists already
+cpn() {
+    local dest=${!#} f t
+    for f in "${@:1:$#-1}"; do
+        [ -e "$f" ] || continue
+        if [ -d "$dest" ]; then t=$dest/$(basename "$f"); else t=$dest; fi
+        [ -e "$t" ] || cp "$f" "$t"
+    done
+}
 
 # Trimmed reads, only where a step needs them: fastp with the course's options, reports kept out of $P
 ensure_trimmed() {   # ensure_trimmed SAMPLE
@@ -165,25 +181,25 @@ if want assembly; then
         [ -e "$f" ] || continue
         s=$(basename "$f" .contigs.fa)
         mkdir -p "$P/02_assembly/shovill/$s"
-        cp -n "$f" "$P/02_assembly/shovill/$s/contigs.fa"
-        [ -f "$R/shovill/$s.contigs.gfa" ] && cp -n "$R/shovill/$s.contigs.gfa" "$P/02_assembly/shovill/$s/contigs.gfa"
+        cpn "$f" "$P/02_assembly/shovill/$s/contigs.fa"
+        [ -f "$R/shovill/$s.contigs.gfa" ] && cpn "$R/shovill/$s.contigs.gfa" "$P/02_assembly/shovill/$s/contigs.gfa"
     done
     for f in "$R"/autocycler/*.autocycler.fasta; do
         [ -e "$f" ] || continue
         s=$(basename "$f" .autocycler.fasta)
         mkdir -p "$P/02_assembly/autocycler/$s/autocycler_out"
-        cp -n "$f" "$P/02_assembly/autocycler/$s/autocycler_out/consensus_assembly.fasta"
-        [ -f "$R/autocycler/$s.autocycler.gfa" ] && cp -n "$R/autocycler/$s.autocycler.gfa" "$P/02_assembly/autocycler/$s/autocycler_out/consensus_assembly.gfa"
+        cpn "$f" "$P/02_assembly/autocycler/$s/autocycler_out/consensus_assembly.fasta"
+        [ -f "$R/autocycler/$s.autocycler.gfa" ] && cpn "$R/autocycler/$s.autocycler.gfa" "$P/02_assembly/autocycler/$s/autocycler_out/consensus_assembly.gfa"
     done
-    mkdir -p "$P/02_assembly/hybrid" && cp -n "$R"/hybrid/*.hybrid.fasta "$P/02_assembly/hybrid/" 2>/dev/null
+    mkdir -p "$P/02_assembly/hybrid" && cpn "$R"/hybrid/*.hybrid.fasta "$P/02_assembly/hybrid/" 2>/dev/null
 fi
 
 # Assemblies named as on the course pages: $COURSE/assemblies/<s>.fasta (Shovill), <s>.hybrid.fasta, and best/
 for d in "$P"/02_assembly/shovill/*/; do
     [ -s "$d/contigs.fa" ] || continue
-    s=$(basename "$d"); cp -n "$d/contigs.fa" "$WORK/assemblies/$s.fasta"
+    s=$(basename "$d"); cpn "$d/contigs.fa" "$WORK/assemblies/$s.fasta"
 done
-cp -n "$P"/02_assembly/hybrid/*.hybrid.fasta "$WORK/assemblies/" 2>/dev/null
+cpn "$P"/02_assembly/hybrid/*.hybrid.fasta "$WORK/assemblies/" 2>/dev/null
 for f in "$WORK"/assemblies/*.fasta; do
     [ -e "$f" ] || continue
     s=$(basename "$f" .fasta); s=${s%.hybrid}
@@ -263,15 +279,36 @@ if want plasmids; then
 fi
 
 # ------------------------------------------------------------------------- Day 6
+D=$P/06_phylogeny/ST39
+# An earlier version of this script mapped to the CHI11E chromosome: never mix two references in one alignment
+if [ -e "$D/ref_CHI11E_chromosome.fasta" ] && { want snippy || want phylo; }; then
+    echo "Removing $D (made with the earlier CHI11E reference)"; rm -rf "$D"
+fi
 if want snippy; then
-    step "Snippy, ST39 against the CHI11E chromosome"
-    D=$P/06_phylogeny/ST39
+    step "Snippy, ST39 against the reference for their species"
     mkdir -p "$D/snippy"
-    ref=$D/ref_CHI11E_chromosome.fasta
-    if [ ! -s "$ref" ]; then
-        seqkit sort -l -r "$P/02_assembly/hybrid/CHI11E.hybrid.fasta" | seqkit head -n 1 > "$ref" || fail "snippy reference"
-    fi
+    # Species of each ST39 isolate from Kleborate, as on Day 6 (6.2): only K. pneumoniae goes in this tree
+    K=$P/03_typing/kleborate/klebsiella_pneumo_complex_output.txt
+    [ -s "$K" ] || fail "snippy (no Kleborate table: run the kleborate step first)"
+    kp=""
     for s in $ST39; do
+        sp=$(awk -F'\t' -v s="$s" 'NR == 1 { for (i = 1; i <= NF; i++) if ($i ~ /(^|__)species$/) c = i; next }
+                                   $1 == s && c { print $c }' "$K" 2>/dev/null)
+        case "$sp" in
+            "Klebsiella pneumoniae"*) kp="$kp $s" ;;
+            "") echo "  $s: not in the Kleborate table: left out" ;;
+            *)  echo "  $s: Kleborate species '$sp', not K. pneumoniae: left out" ;;
+        esac
+    done
+    # The species-wide reference from the pipeline's sheet (an ST39-specific row would win, as in the pipeline)
+    read -r ref_name ref_acc < <(awk -F',' '/^[[:space:]]*#/ || NF < 4 { next } $1 == "Klebsiella pneumoniae" && $2 == "ST39" { print $3, $4; f = 1; exit }
+             $1 == "Klebsiella pneumoniae" && $2 == "" && !sp { sp = $3 " " $4 } END { if (!f && sp) print sp }' "$REF_SHEET")
+    ref=$D/ref_${ref_name}.fasta
+    echo "Reference: $ref_name ($ref_acc); isolates:$kp"
+    if [ ! -s "$ref" ]; then
+        cp "$SHARED/references/${ref_acc}.fasta" "$ref" || fail "snippy reference ($SHARED/references/${ref_acc}.fasta: run bin/fetch_references.py, section 7.4)"
+    fi
+    for s in $kp; do
         [ -s "$D/snippy/$s/snps.tab" ] && continue
         ensure_trimmed "$s" || { fail "snippy:$s (fastp)"; continue; }
         snippy --outdir "$D/snippy/$s" --ref "$ref" \
@@ -279,6 +316,42 @@ if want snippy; then
             --cpus "$THREADS" --force && ran_here || fail "snippy:$s"
         rm -f "$D/snippy/$s"/*.bam "$D/snippy/$s"/*.bam.bai      # large; snippy-core does not need them
     done
+fi
+
+# The rest of Day 6, 6.4-6.7, with the page's commands and file names (in $D, like the participants)
+if want phylo && [ ! -s "$D/ST39_pairs.tsv" ]; then
+    step "Core alignment, Gubbins, IQ-TREE and SNP distances (ST39)"
+    ref=$(ls "$D"/ref_*.fasta 2>/dev/null | head -1)
+    if [ -z "$ref" ] || [ -z "$(ls -d "$D"/snippy/*/ 2>/dev/null)" ]; then
+        fail "phylo (no Snippy results: run the snippy step first)"
+    else
+        ( cd "$D" || exit 1
+          snippy-core --ref "$(basename "$ref")" --prefix core snippy/* &&
+          snippy-clean_full_aln core.full.aln > clean.full.aln &&
+          run_gubbins.py --prefix ST39 --threads "$THREADS" clean.full.aln &&
+          snp-sites -c ST39.filtered_polymorphic_sites.fasta > ST39.core_snps.fasta &&
+          iqtree -s ST39.core_snps.fasta -m GTR+G+ASC -B 1000 -T "$THREADS" --prefix ST39 &&
+          snp-dists ST39.core_snps.fasta > ST39_snp_dists_filtered.tsv &&
+          snp-dists core.aln > ST39_snp_dists_raw.tsv &&
+          awk -F'\t' -v c="$CLUSTER" 'BEGIN{n=split(c,a," "); for(i=1;i<=n;i++) inC[a[i]]=1}
+              NR==1 {for(i=2;i<=NF;i++) h[i]=$i; next}
+              {for(i=2;i<=NF;i++) if ($1 < h[i]) {
+                  t = (inC[$1] && inC[h[i]]) ? "within_cluster" : ((inC[$1] || inC[h[i]]) ? "cluster_vs_other" : "other_vs_other")
+                  print $1"\t"h[i]"\t"$i"\t"t }}' ST39_snp_dists_filtered.tsv > ST39_pairs.tsv
+        ) && ran_here || fail phylo
+    fi
+fi
+
+if want ska2 && [ ! -s "$D/ST39_ska_distances.tsv" ]; then
+    step "SKA2 (ST39, from the best assemblies)"
+    mkdir -p "$D"
+    ( cd "$D" || exit 1
+      for s in $ST39; do [ -s "$WORK/best/$s.fasta" ] && printf '%s\t%s\n' "$s" "$WORK/best/$s.fasta"; done > ska_inputs.tsv
+      ska build -f ska_inputs.tsv -o ST39_ska -k 31 --threads "$THREADS" &&
+      ska distance ST39_ska.skf -o ST39_ska_distances.tsv
+    ) && ran_here || fail ska2
+    # The input list names this script's scratch folder; participants write their own (6.8)
+    rm -f "$D/ska_inputs.tsv"
 fi
 
 # ------------------------------------------------------------------------- Day 8
