@@ -56,6 +56,37 @@ account number. Type `exit` to end the session at the end of the day.
 > Only one step in the course runs on the **login node** instead, because it needs the internet: installing
 > your R packages (section 0.3). Everything else runs in your session.
 
+**Keep the connection alive.** Many networks drop an SSH connection that has been quiet for a few minutes, and
+your session ends with it. Ask your computer to send a small "keepalive" signal every minute:
+
+| Your terminal | How |
+| --- | --- |
+| macOS, Linux, Windows PowerShell | `ssh -o ServerAliveInterval=60 -y user7@hpc.ilri.cgiar.org`, or once for all logins: add the two lines below to `~/.ssh/config` on your own computer |
+| MobaXterm | Settings → Configuration → SSH → tick **SSH keepalive** |
+| PuTTY | Connection → **Seconds between keepalives**: 60 (then save the session) |
+
+```text
+Host hpc.ilri.cgiar.org
+    ServerAliveInterval 60
+```
+
+> [!WARNING]
+> **If you are disconnected**, your interactive session ends, and so does any command that was running in it.
+> Your files and your course settings are safe. To carry on:
+>
+> ```bash
+> ssh -y user7@hpc.ilri.cgiar.org      # log in again
+> start_session                        # a new session on your node
+> cd $COURSE                           # or the folder you were working in
+> ```
+>
+> You do not need to run `use_tools` again: a course tool you type is found and run from its image for you
+> (section 0.3). Then check which outputs exist (`ls`), run the unfinished step again for the samples that
+> are missing, or copy the trainers' pre-computed results for that step from `$SHARED/precomputed/`.
+> The long steps by hand (the Shovill and Autocycler assemblies on Day 2) offer pre-computed results. For a
+> pipeline run (Days 5 and 10), go back to the same folder and run the same `nextflow run` command with
+> `-resume` added: Nextflow reuses every step that had finished and only redoes the rest.
+
 ### 0.1 Set up your course folder
 
 > [!IMPORTANT]
@@ -233,6 +264,16 @@ list_tools          # every tool and the image (or module) it comes from
 After `use_tools qc` you type `fastp ...` as usual; behind the scenes it runs
 `singularity exec $SHARED/containers/<fastp image> fastp ...`. Switching on another group keeps the earlier
 groups' tools available.
+
+**Forgot `use_tools`, or logged in again after a disconnect?** The course tools still work: when you type a
+course tool that is not switched on, it is run from its image for you (in module mode, its modules are loaded
+first); `nextflow`, `R` and `Rscript` load their modules the same way. `use_tools` remains the clear way to start each step, because it checks that every image is in place,
+and `use_tools all` switches on every group at once. `type fastp` only says "function" after `use_tools`.
+
+```bash
+seqkit version            # works in a new session, without use_tools
+export TOOLS_AUTO=0       # (optional) switch the automatic loading off for this session
+```
 
 **Once, today: install your R packages.** The R sessions (Days 4 and 7–9) use packages from your own R library
 in your home folder. Installing them needs internet, so run this on the **login node**; it takes 20–40

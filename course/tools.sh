@@ -13,7 +13,13 @@
 #     use_tools phylo       # Snippy, SKA2, Gubbins, snp-sites, snp-dists, IQ-TREE, seqkit
 #     use_tools r           # R (module) with your own package library
 #     use_tools nextflow    # Nextflow (module)
+#     use_tools all         # every group above at once
 #     list_tools            # every group, its tools and where each comes from
+#
+# Forgot `use_tools`, or logged in again after a disconnect? A course tool typed on its own still runs:
+# when bash cannot find a command, command_not_found_handle (below) runs it from its image (or loads its
+# module) for you. `use_tools` is still useful: it checks the images up front and makes `type <tool>` work.
+# Switch the automatic loading off with: export TOOLS_AUTO=0
 #
 # Two ways to get the tools (TOOL_MODE, set before the `source` line, or in ~/.bashrc):
 #   singularity (default) : each command runs inside the pipeline's own image, so you use exactly the
@@ -74,6 +80,9 @@ declare -gA GROUP_MODULES=(
 declare -gA _SAME_IMAGE_AS=( [KAPTIVE]=KLEBORATE [SNIPPY_CORE]=SNIPPY_RUN [AMRFINDERPLUS_UPDATE]=AMRFINDERPLUS_RUN )
 
 export TOOL_MODE CONTAINERS TOOL_BINDS
+# This file's path, so that a child shell (e.g. `bash my_script.sh`) can load the tables above again
+_TOOLS_SH=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/$(basename "${BASH_SOURCE[0]}")
+export _TOOLS_SH
 
 # ------------------------------------------------------------------------------ helpers
 _tools_msg() { printf '%s\n' "$*" >&2; }
@@ -154,10 +163,19 @@ _tools_exec() {
 }
 export -f _tools_msg _tools_module _tools_singularity _tools_image _tools_exec 2>/dev/null
 
+_tools_group_of() {  # _tools_group_of TOOL -> the first group that lists it
+    local g
+    for g in qc assembly medaka typing amr plasmids phylo; do
+        case " ${GROUP_TOOLS[$g]} " in *" $1 "*) echo "$g"; return 0 ;; esac
+    done
+    return 1
+}
+export -f _tools_group_of 2>/dev/null
+
 # ------------------------------------------------------------------------------ what you type
 use_tools() {
     local group=${1:-} t
-    if [ -z "$group" ]; then _tools_msg "usage: use_tools qc|assembly|medaka|typing|amr|plasmids|phylo|r|nextflow"; return 1; fi
+    if [ -z "$group" ]; then _tools_msg "usage: use_tools qc|assembly|medaka|typing|amr|plasmids|phylo|all|r|nextflow"; return 1; fi
     case "$group" in
         r|R)
             _tools_module "${R_MODULE}" || return 1
@@ -170,7 +188,12 @@ use_tools() {
             _tools_msg "Nextflow: $(command -v nextflow) ($NEXTFLOW_MODULE)"
             return 0 ;;
     esac
-    [ -n "${GROUP_TOOLS[$group]:-}" ] || { _tools_msg "unknown group '$group': use one of ${!GROUP_TOOLS[*]} r nextflow"; return 1; }
+    if [ "$group" = all ]; then
+        local g status=0
+        for g in qc assembly medaka typing amr plasmids phylo; do use_tools "$g" || status=1; done
+        return $status
+    fi
+    [ -n "${GROUP_TOOLS[$group]:-}" ] || { _tools_msg "unknown group '$group': use one of ${!GROUP_TOOLS[*]} all r nextflow"; return 1; }
 
     if [ "${TOOL_MODE}" = module ]; then
         _tools_module ${GROUP_MODULES[$group]} || return 1
@@ -211,3 +234,40 @@ list_tools() {
     echo "== r          module ${R_MODULE}"
     echo "== nextflow   module ${NEXTFLOW_MODULE}"
 }
+
+# ------------------------------------------------------------------------------ automatic loading
+# bash calls command_not_found_handle when a command is not found. For a course tool, run it from its image
+# (TOOL_MODE=singularity) or load its group's modules first (TOOL_MODE=module), so that the course's commands
+# work without `use_tools`, e.g. in a new session after a disconnect. Anything else is passed on to the
+# system's own handler, if there is one.
+# (Only a handler that is not this one is kept, so sourcing this file again does not chain it to itself.)
+if declare -F command_not_found_handle >/dev/null 2>&1 && ! declare -F _tools_prev_cnf >/dev/null 2>&1 \
+        && ! declare -f command_not_found_handle | grep -q _TOOLS_SH; then
+    eval "$(declare -f command_not_found_handle | sed '1s/^command_not_found_handle/_tools_prev_cnf/')"
+fi
+command_not_found_handle() {
+    local cmd=$1 g
+    # In a child shell the tables are not inherited (bash does not export arrays): read this file again
+    if ! declare -p TOOL_IMAGE >/dev/null 2>&1 && [ -r "${_TOOLS_SH:-}" ]; then
+        source "${_TOOLS_SH}" >/dev/null 2>&1
+    fi
+    # nextflow, R and Rscript come from modules in both modes
+    if [ "${TOOLS_AUTO:-1}" = 1 ] && declare -F use_tools >/dev/null 2>&1; then
+        case "$cmd" in
+            nextflow)  use_tools nextflow >/dev/null 2>&1 && hash -r && type -P "$cmd" >/dev/null && { "$@"; return $?; } ;;
+            R|Rscript) use_tools r        >/dev/null 2>&1 && hash -r && type -P "$cmd" >/dev/null && { "$@"; return $?; } ;;
+        esac
+    fi
+    if [ "${TOOLS_AUTO:-1}" = 1 ] && declare -p TOOL_IMAGE >/dev/null 2>&1 && [ -n "${TOOL_IMAGE[$cmd]:-}" ]; then
+        if [ "${TOOL_MODE}" = module ]; then
+            g=$(_tools_group_of "$cmd") && _tools_module ${GROUP_MODULES[$g]} >/dev/null 2>&1 \
+                && hash -r && type -P "$cmd" >/dev/null && { "$@"; return $?; }
+        else
+            _tools_exec "${TOOL_IMAGE[$cmd]}" "$@"; return $?
+        fi
+    fi
+    if declare -F _tools_prev_cnf >/dev/null 2>&1; then _tools_prev_cnf "$@"; return $?; fi
+    printf 'bash: %s: command not found\n' "$cmd" >&2
+    return 127
+}
+export -f command_not_found_handle 2>/dev/null

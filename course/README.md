@@ -192,6 +192,12 @@ Odd-numbered accounts (`user1`, `user3`, …) work on `compute05`, even-numbered
 `compute06`; `start_session` picks the right one. Before section 0.1 on Day 1, use
 `interactive -w compute05 -c 1` (odd) or `interactive -w compute06 -c 1` (even). Type `exit` to end it.
 
+**Disconnected?** Log in again, run `start_session`, and `cd` back to your folder: your files and settings are
+kept, and the course tools load by themselves (no need to repeat `use_tools`). A command that was running when
+the connection dropped has stopped: run that step again, or copy its pre-computed results (a pipeline run:
+the same command with `-resume`). To avoid idle
+disconnects, turn on SSH keepalive ([Day 1, section 0.0](day01.md#00-log-in-and-start-your-session)).
+
 ## Before Day 1
 
 - [ ] You can log in to the HPC with your course account (`user1` to `user30`; your trainer sends it and its

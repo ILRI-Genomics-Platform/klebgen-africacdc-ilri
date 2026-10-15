@@ -61,6 +61,16 @@ the account number. Before the course, check that:
   tell participants the option for more memory, or have them use the pre-computed Kraken2 reports.
 - Each node has memory for 15 sessions at once (15 × 10 GB = 150 GB at the Kraken2 step).
 - Participant accounts are allowed to request `compute05` and `compute06` with `-w`.
+- Idle disconnects. Check whether the login shell logs out idle users (`echo $TMOUT` on the login node and in an
+  interactive session; empty means no limit) and how long an idle interactive session is kept. Day 1 (section
+  0.0) asks participants to turn on SSH keepalive, which prevents most network drops.
+
+**When a participant is disconnected.** The interactive session ends with the SSH connection, and so does the
+command that was running in it; files and `~/.bashrc` settings are kept. After `start_session`, the course tools
+load automatically (`command_not_found_handle` in `course/tools.sh` runs a course tool from its image, or loads
+its modules, when `use_tools` has not been run), so participants only re-run the interrupted step or copy its
+pre-computed results. Nothing short of `screen`/`tmux` or a batch job keeps a running command alive through a
+disconnect, so the long steps (Shovill, Autocycler, the pipeline) all have pre-computed results (section 8).
 
 ## 3. The shared folder
 

@@ -58,6 +58,11 @@ nextflow run $SHARED/neonatal-amr-nf/main.nf -profile singularity -c $SITE_CONFI
     --amrfinderplus_db $SHARED/databases/amrfinderplus/amrfinderdb.tar.gz
 ```
 
+> [!TIP]
+> **Disconnected during the run?** The run stops with your session, but nothing finished is lost. Log in,
+> `start_session`, `cd $COURSE/capstone`, and run the same command again with `-resume` at the end:
+> Nextflow reuses every finished step and only runs the rest.
+
 ## Suggested team roles
 
 | Role | Responsible for |
