@@ -5,3 +5,4 @@
 work/
 training_data/
 .nextflow*
+TRAINER_GUIDE.md
