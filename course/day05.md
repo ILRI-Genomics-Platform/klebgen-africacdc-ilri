@@ -152,9 +152,9 @@ Each module folder has three files: `main.nf` (the process), `meta.yml` (inputs 
 `environment.yml` (the exact software version).
 
 ```bash
-cd $SHARED/neonatal-amr-nf
-cat modules/local/kleborate/main.nf
-cat modules/local/kleborate/environment.yml
+P=$SHARED/neonatal-amr-nf          # the shared pipeline: read it, but never run Nextflow from inside it
+cat $P/modules/local/kleborate/main.nf
+cat $P/modules/local/kleborate/environment.yml
 ```
 
 ### The software: shared Singularity images
@@ -191,17 +191,24 @@ less $SITE_CONFIG
 > With these options the pipeline uses only the shared images. If one is missing, the run stops before it
 > starts, with a message saying so: tell a trainer. You cannot fix it yourself, by design.
 
-Every pipeline has a help page. It needs no other options:
-
-```bash
-nextflow run $SHARED/neonatal-amr-nf/main.nf --help
-```
-
-### Run 1: a test run (no tools executed)
+Every pipeline has a help page. It needs no other options, but like every Nextflow command it must be run from
+**your own folder**:
 
 ```bash
 use_tools nextflow
 mkdir -p $COURSE/pipeline && cd $COURSE/pipeline
+nextflow run $SHARED/neonatal-amr-nf/main.nf --help
+```
+
+> [!IMPORTANT]
+> Nextflow writes a `.nextflow/` folder (its run history) and a `.nextflow.log` file in the folder you start it
+> from. Started inside the read-only `$SHARED/neonatal-amr-nf`, even `--help` fails with
+> `.nextflow/history.lock (Permission denied)`. Always `cd $COURSE/pipeline` first and give the pipeline's full path.
+
+### Run 1: a test run (no tools executed)
+
+```bash
+cd $COURSE/pipeline
 nextflow run $SHARED/neonatal-amr-nf/main.nf -profile test,singularity -c $SITE_CONFIG -stub \
     --outdir test_results
 ```
