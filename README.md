@@ -206,7 +206,8 @@ Each group of related isolates gets one core-SNP alignment (Snippy), recombinati
 
 | `--phylo_grouping` | Groups | Reference genome for Snippy |
 | --- | --- | --- |
-| `kleborate` (default) | Species + ST reported by Kleborate, e.g. `Kpneumoniae_ST39`, `Kvariicola_ST1469`, `Ecoli_ST131` | From [`conf/phylo_references.csv`](conf/phylo_references.csv): an ST-specific row if there is one, otherwise the species row |
+| `species` (default) | Species reported by Kleborate, whatever the ST: `Kpneumoniae`, `Kvariicola`, `Ecoli`. Every isolate of a species gets one SNP-distance matrix and one tree | The species row of [`conf/phylo_references.csv`](conf/phylo_references.csv) (ST rows are not used) |
+| `kleborate` | Species + ST reported by Kleborate, e.g. `Kpneumoniae_ST39`, `Kvariicola_ST1469`, `Ecoli_ST131` | From [`conf/phylo_references.csv`](conf/phylo_references.csv): an ST-specific row if there is one, otherwise the species row |
 | `samplesheet` | The samplesheet's `phylo_group` column | `--phylo_references` (CSV `group,fasta`), or the group's best own assembly (hybrid first, then fewest contigs) |
 
 The reference sheet as shipped:
@@ -215,16 +216,29 @@ The reference sheet as shipped:
 | --- | --- | --- |
 | *Klebsiella pneumoniae* | NTUH-K2044 chromosome | [AP006725.1](https://www.ncbi.nlm.nih.gov/nuccore/AP006725.1) |
 | *Klebsiella quasipneumoniae* | ATCC 700603 chromosome | [CP029597.1](https://www.ncbi.nlm.nih.gov/nuccore/CP029597.1) |
-| *Klebsiella variicola* | ATCC 700603 chromosome | [CP029597.1](https://www.ncbi.nlm.nih.gov/nuccore/CP029597.1) |
+| *Klebsiella variicola* | DSM 15968 (type strain) chromosome | [CP010523](https://www.ncbi.nlm.nih.gov/nuccore/CP010523) |
 | *Escherichia coli* | K-12 MG1655 chromosome | [U00096.3](https://www.ncbi.nlm.nih.gov/nuccore/U00096.3) |
 
-Add a row with an `st` value to use a closer reference for one ST (for example a closed ST39 genome); it takes
-priority over the species row. Isolates with no ST (`NA`), or whose species has no row, are left out with a warning.
+Add a row with an `st` value to use a closer reference for one ST (for example a closed ST39 genome); with
+`--phylo_grouping kleborate` it takes priority over the species row. Isolates with no ST (`NA`), or whose species has no row,
+are left out with a warning (in both modes).
+
+With `species`, SNP distances between isolates of different STs are large (thousands of SNPs) and only the close
+pairs matter for transmission; read them with each isolate's ST. Two trade-offs against per-ST groups: one
+reference for many lineages leaves a smaller core genome, so close pairs can be a few SNPs closer than with a
+per-ST reference; and Gubbins, designed for a single lineage, runs longer on a whole species and its
+recombination calls between distant STs are less reliable. Use `--phylo_grouping kleborate` for per-ST groups.
 Download the genomes once, before the first run; the pipeline stops with instructions if any are missing:
 
 ```bash
 bin/fetch_references.py --group amr-course     # into --phylo_reference_dir; --check to only report
 ```
+
+Each species needs a reference of **that** species: isolates mapped to another species' genome (even
+*K. quasipneumoniae* for *K. variicola*) have about half of the genome missing, and Gubbins drops every isolate with
+more than 25% missing data. The pipeline names such isolates in a warning before Gubbins; if fewer than 3 usable
+isolates are left, the group gets SNP distances only (no Gubbins, no tree) instead of stopping the run.
+`bin/fetch_references.py` warns when a downloaded genome's FASTA header names a different species than the sheet.
 
 Groups smaller than `--phylo_min_group_size` (default 3) are skipped. A tree needs at least 3 isolates (with the
 reference, 4 sequences); with `--phylo_min_group_size 2`, a pair gets SNP distances only (no Gubbins, no tree).
@@ -321,8 +335,8 @@ section 7.
 | `--outdir` | `results` | Output folder |
 | `--kraken2_db` | none | Kraken2 database folder (with Bracken files); omit to skip the contamination check |
 | `--amrfinderplus_db` | none | AMRFinderPlus database; omit to download the latest (its date is recorded) |
-| `--phylo_grouping` | `kleborate` | `kleborate` (species + ST from Kleborate) or `samplesheet` (`phylo_group` column) |
-| `--phylo_reference_sheet` | `conf/phylo_references.csv` | Reference genome per species / ST (kleborate mode) |
+| `--phylo_grouping` | `species` | `species` (all isolates of a Kleborate species, any ST), `kleborate` (species + ST from Kleborate) or `samplesheet` (`phylo_group` column) |
+| `--phylo_reference_sheet` | `conf/phylo_references.csv` | Reference genome per species / ST (species and kleborate modes) |
 | `--phylo_reference_dir` | `references/` (site configs: shared folder) | Folder with `<accession>.fasta`, filled by `bin/fetch_references.py` |
 | `--phylo_references` | none | Samplesheet mode: CSV `group,fasta`; by default each group's own best assembly (hybrid first, then fewest contigs) |
 | `--phylo_method` | `snippy` | `snippy` (map to the reference), `ska2` (split k-mers; also reference-free SNP distances), or `both` (to compare; SKA2 results in `<group>_ska2/`) |

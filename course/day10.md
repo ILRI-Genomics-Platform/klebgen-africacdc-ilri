@@ -38,7 +38,7 @@ Nanopore reads, so it gets a hybrid assembly.
 
 | File | Contents |
 | --- | --- |
-| `$SHARED/capstone/samplesheet.csv` | Sample sheet for the pipeline (5 isolates; the pipeline groups them by Kleborate species + ST) |
+| `$SHARED/capstone/samplesheet.csv` | Sample sheet for the pipeline (5 isolates; the pipeline groups them by Kleborate species) |
 | `$SHARED/capstone/metadata_capstone.tsv` | Year, ward, neonate, published typing |
 | `$SHARED/capstone/ast_capstone.tsv` | Disc-diffusion AST |
 | `$SHARED/capstone/precomputed/` | Full pipeline results, if your own run does not finish in time |
@@ -81,7 +81,7 @@ Everyone checks everyone else's numbers before the presentation.
 - [ ] Lineages: ST counts, by ward and year.
 - [ ] Resistance: ESBL, carbapenemase and aminoglycoside genes; agreement with AST.
 - [ ] Plasmids: which resistance genes are on plasmids, and are the same plasmids found in several isolates?
-- [ ] Transmission: a tree and SNP distances for each group (e.g. `Kpneumoniae_ST39`); each cluster classified with ward and year.
+- [ ] Transmission: a tree and SNP distances for each group (e.g. `Kpneumoniae`); each cluster classified with ward and year.
 - [ ] Robustness: does each cluster call hold with both Snippy and SKA2? (`bin/compare_snp_methods.py --phylo $SHARED/capstone/precomputed/06_phylogeny --out $COURSE/capstone/snippy_vs_ska2`)
 - [ ] Antigens: K and O types of any cluster.
 - [ ] Master table: one row per isolate, row count checked.

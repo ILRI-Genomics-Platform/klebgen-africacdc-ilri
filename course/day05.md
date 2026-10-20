@@ -243,7 +243,7 @@ nextflow run $SHARED/neonatal-amr-nf/main.nf -profile singularity -c $SITE_CONFI
 | `03_typing/` | Kleborate (and *E. coli* typing) | 3 |
 | `04_amr/` | AMRFinderPlus | 3–4 |
 | `05_plasmids/` | MOB-suite | 4–5 |
-| `06_phylogeny/` | One tree and SNP-distance matrix per ST group: `<group>/` from Snippy and, with `--phylo_method both` (as here), `<group>_ska2/` from SKA2 | 6–7 |
+| `06_phylogeny/` | One tree and SNP-distance matrix per species (`Kpneumoniae`, `Ecoli`; per ST with `--phylo_grouping kleborate`): `<group>/` from Snippy and, with `--phylo_method both` (as here), `<group>_ska2/` from SKA2 | 6–7 |
 | `multiqc/` | Summary report | |
 | `pipeline_info/` | Software versions, run time per step | |
 

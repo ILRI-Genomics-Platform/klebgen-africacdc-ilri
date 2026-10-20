@@ -27,7 +27,10 @@ if [ -z "${AMRFINDER_DB:-}" ] && [ -d "${SHARED_DIR}/databases/amrfinderplus/lat
 fi
 AMRFINDER_DB="${AMRFINDER_DB:-}"        # .tar.gz or folder
 REFERENCE_SHEET="${REFERENCE_SHEET:-${PIPELINE_DIR}/conf/phylo_references.csv}"
-MIN_GROUP="${MIN_GROUP:-2}"             # phylogeny: smallest group (species + ST) that is analysed
+MIN_GROUP="${MIN_GROUP:-2}"             # phylogeny: smallest group that is analysed
+# Phylogeny groups, as the pipeline's --phylo_grouping: species (all isolates of a species together, any ST,
+# one reference per species) or st (one group per species + ST, e.g. Kpneumoniae_ST39; the pipeline's 'kleborate')
+PHYLO_GROUPING="${PHYLO_GROUPING:-species}"
 # Phylogeny SNP method, as the pipeline's --phylo_method: snippy (map to the reference), ska2 (split k-mers),
 # or both (to compare them; SKA2's results go to 06_phylogeny/<group>_ska2/)
 PHYLO_METHOD="${PHYLO_METHOD:-snippy}"

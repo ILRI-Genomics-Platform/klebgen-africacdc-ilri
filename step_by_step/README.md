@@ -34,7 +34,8 @@ and the course's shared images, references and Kraken2 database:
 | `REFERENCES` | `.../shared/references` | Reference genomes for the phylogeny (step 11) |
 | `KRAKEN2_DB` | `$SHARED/databases/kraken2` | Kraken2 Standard-8 + Bracken database (step 02; course trainer guide, section 5) |
 | `AMRFINDER_DB` | `$SHARED/databases/amrfinderplus/latest` if present | AMRFinderPlus database; empty = download it in step 08 (needs internet) |
-| `MIN_GROUP` | 2 | Smallest species + ST group that gets a phylogeny |
+| `MIN_GROUP` | 2 | Smallest group that gets a phylogeny |
+| `PHYLO_GROUPING` | `species` | Step 11 groups, as the pipeline's `--phylo_grouping`: `species` (all isolates of a species, any ST, one reference) or `st` (species + ST, the pipeline's `kleborate`) |
 | `PHYLO_METHOD` | `snippy` | How step 11 finds SNPs, as the pipeline's `--phylo_method`: `snippy`, `ska2` or `both` (to compare them) |
 | `SKA_K` | 31 | SKA2 split k-mer length (step 11 with `ska2` or `both`) |
 | `BAKTA_DB` | `$SHARED/databases/bakta/db-light` | Bakta light database (optional step 10b; course trainer guide, section 5) |
@@ -108,9 +109,10 @@ Rough estimates for a course session with 1 CPU; with more CPUs most steps are f
 if the sample has one, otherwise Shovill's contigs (step 04). With an assembly samplesheet, the `fasta`
 from the samplesheet is used and steps 01-05 are not needed.
 
-**Phylogeny groups (step 11).** As in the pipeline, isolates are grouped by the species and ST that
-Kleborate reports (e.g. `Kpneumoniae_ST39`), and each group is mapped to the reference listed for its
-species in `conf/phylo_references.csv`. So run step 07 on all samples first. A group needs at least
+**Phylogeny groups (step 11).** As in the pipeline, isolates are grouped by the species Kleborate reports
+(`PHYLO_GROUPING=species`, the default: e.g. all *K. pneumoniae* in `Kpneumoniae`, whatever the ST) or by
+species and ST (`PHYLO_GROUPING=st`: e.g. `Kpneumoniae_ST39`), and each group is mapped to the reference
+listed for its species in `conf/phylo_references.csv`. So run step 07 on all samples first. A group needs at least
 `MIN_GROUP` isolates. Gubbins and IQ-TREE need 4 sequences (the reference plus 3 isolates), so a group of
 2 gets SNP distances only.
 
@@ -118,7 +120,7 @@ species in `conf/phylo_references.csv`. So run step 07 on all samples first. A g
 
 ```mermaid
 flowchart LR
-    G["group: species + ST<br/>(Kleborate, step 07)"] --> S["Snippy per isolate<br/>→ snippy-core"]
+    G["group: species (or species + ST)<br/>(Kleborate, step 07)"] --> S["Snippy per isolate<br/>→ snippy-core"]
     G --> K["SKA2 for the whole group<br/>ska build → ska map"]
     K -.-> KD["ska distance<br/>reference-free distances"]
     S --> C["snippy-clean_full_aln"]
@@ -244,5 +246,5 @@ The commands and options are the same. The way they are run differs:
 | `PHYLO_METHOD must be snippy, ska2 or both` | Check the spelling: `PHYLO_METHOD=both bash step_by_step/11_phylogeny.sh` |
 | `no image for process SKA2` | The shared images predate SKA2: the trainer re-runs `bin/prepare_shared_containers.sh` |
 | `no Bakta database in ...` | Set `BAKTA_DB`, or skip step 10b (the trainer guide, section 5.1, shows the download) |
-| `group ... has 1 isolate(s) (< MIN_GROUP=2); skipped` | Expected: a phylogeny needs at least two isolates of the same species and ST |
+| `group ... has 1 isolate(s) (< MIN_GROUP=2); skipped` | Expected: a phylogeny needs at least two isolates in the group (same species, and same ST with `PHYLO_GROUPING=st`) |
 | AMRFinderPlus download fails | The compute node has no internet. Run step 08 once on the login node, or set `AMRFINDER_DB` |

@@ -2,7 +2,7 @@
 // PHYLOGENY (Module 6): one recombination-aware phylogeny and SNP-distance
 // matrix per group of related isolates, for transmission analysis.
 //
-//   Kleborate species + ST --> one group per ST, each with a reference genome
+//   Kleborate species (+ ST) --> one group per species (default) or per ST, each with a reference genome
 //
 //   reads (or contigs) of the group's isolates
 //      |-- snippy: snippy per isolate (--ctgs for contigs) --> snippy-core  --> <group>.full.aln
@@ -21,7 +21,11 @@
 //                    bin/compare_snp_methods.py puts the two sets of SNP distances side by side.
 //
 // Groups and references (--phylo_grouping):
-//   kleborate   (default) group = species + ST reported by Kleborate, e.g. Kpneumoniae_ST39.
+//   species     (default) group = species reported by Kleborate, whatever the ST, e.g. Kpneumoniae, Ecoli:
+//               every isolate of a species is mapped to the same reference (the species row of
+//               --phylo_reference_sheet; ST rows are not used) and all of them get one SNP-distance matrix and
+//               one tree. Isolates without an ST from Kleborate are left out, as in kleborate mode.
+//   kleborate   group = species + ST reported by Kleborate, e.g. Kpneumoniae_ST39.
 //               Reference from the sheet --phylo_reference_sheet (conf/phylo_references.csv):
 //               an ST-specific row if there is one, otherwise the species row.
 //   samplesheet group = the samplesheet's phylo_group column. Reference from
@@ -48,33 +52,37 @@ workflow PHYLOGENY {
     ch_short_reads      // [ meta, [ R1, R2 ] ], or [ meta, contigs ] for assemblies (meta.input_type == 'assembly')
     ch_assembly         // [ meta, fasta ]
     ch_kleborate        // [ meta, kleborate.txt ]
-    grouping            // 'kleborate' or 'samplesheet'
-    reference_sheet     // CSV species,st,name,accession (kleborate mode)
-    reference_dir       // folder with <accession>.fasta (kleborate mode)
+    grouping            // 'species', 'kleborate' or 'samplesheet'
+    reference_sheet     // CSV species,st,name,accession (species and kleborate modes)
+    reference_dir       // folder with <accession>.fasta (species and kleborate modes)
     phylo_references    // CSV group,fasta or null (samplesheet mode)
     min_group_size      // groups smaller than this are skipped
     method              // 'snippy', 'ska2' or 'both'
 
     main:
-    if (grouping == 'kleborate') {
-        // ---- group by Kleborate species + ST; reference by species (or ST) from the sheet
+    if (grouping in ['species', 'kleborate']) {
+        // ---- group by Kleborate species (species mode) or species + ST (kleborate mode);
+        //      reference by species (or, in kleborate mode, ST) from the sheet
         def refRows = readReferenceSheet(reference_sheet)
+        def bySpecies = grouping == 'species'
 
         ch_grouped = ch_short_reads
             .map { meta, reads -> [meta.id, meta, reads] }
             .join(ch_kleborate.map { meta, txt -> [meta.id, parseKleborate(txt)] })
             .flatMap { id, meta, reads, typing ->
                 def st = typing.st
-                if (!typing.species || !st || st in ['NA', '-', '']) {
+                def noSt = !st || st in ['NA', '-', '']
+                if (!typing.species || noSt) {
                     log.warn "Phylogeny: ${id} has no species/ST from Kleborate (species '${typing.species}', ST '${st}'); left out"
                     return []
                 }
-                def ref = chooseReference(refRows, typing.species, st)
+                def ref = chooseReference(refRows, typing.species, bySpecies ? null : st)
                 if (!ref) {
                     log.warn "Phylogeny: ${id} is '${typing.species}', which has no reference in ${reference_sheet}; left out"
                     return []
                 }
-                def group = "${speciesLabel(typing.species)}_${st}".replaceAll(/[^A-Za-z0-9_-]/, '')
+                def label = bySpecies ? speciesLabel(typing.species) : "${speciesLabel(typing.species)}_${st}"
+                def group = label.replaceAll(/[^A-Za-z0-9_-]/, '')
                 def fasta = file("${reference_dir}/${ref.accession}.fasta", checkIfExists: true)
                 return [[meta + [phylo_group: group, kleborate_species: typing.species, kleborate_st: st], reads, ref, fasta]]
             }
@@ -190,16 +198,40 @@ workflow PHYLOGENY {
     }
     SNIPPY_CLEAN(ch_full_aln)
 
-    // ---- groups big enough for a tree: alignment = reference + isolates >= 4 sequences
+    // ---- groups big enough for a tree: alignment = reference + isolates >= 4 sequences.
+    // Gubbins drops every isolate with more than 25% missing data (N, '-', '?': its default --filter-percentage)
+    // and stops if fewer than 3 sequences are left. Typical cause: isolates mapped to a reference of another
+    // species (about half the genome is then missing), or low-coverage assemblies. Those isolates are named
+    // here; if fewer than 3 usable isolates remain, the group gets SNP distances only instead of failing the run.
     ch_clean = SNIPPY_CLEAN.out.aln
         .map { meta, aln -> [meta.group, meta, aln] }
         .combine(ch_group_sizes, by: 0)
-        .branch { _group, meta, aln, n ->
-            tree: n >= 3
+        .map { _group, meta, aln, n ->
+            def usable = n
+            if (!workflow.stubRun) {
+                def gappy = alignmentMissing(aln).drop(1).findAll { rec -> rec.missing > gubbinsMaxMissing() }
+                if (gappy) {
+                    usable = n - gappy.size()
+                    log.warn "Phylogeny group ${meta.id}: ${gappy.size()} of ${n} isolates have more than " +
+                        "${gubbinsMaxMissing()}% missing data, so Gubbins leaves them out of the tree and SNP distances: " +
+                        gappy.collect { rec -> "${rec.name} (${String.format('%.1f', rec.missing)}%)" }.join(', ') +
+                        ". Check that the reference is the right species (conf/phylo_references.csv) and the isolates' assembly quality."
+                }
+            }
+            [meta, aln, n, usable]
+        }
+        .branch { meta, aln, n, usable ->
+            tree: usable >= 3
                 return [meta, aln]
             pair: true
-                log.warn "Phylogeny group ${meta.id} has ${n} isolates: too few for Gubbins and IQ-TREE (they need 3 or more). " +
-                    "Reporting SNP distances from the core alignment only, without recombination filtering."
+                if (usable < n) {
+                    log.warn "Phylogeny group ${meta.id}: only ${usable} isolate(s) with enough data for Gubbins and IQ-TREE " +
+                        "(they need 3 or more). Reporting SNP distances from the core alignment only (all ${n} isolates, " +
+                        "without recombination filtering); distances involving the isolates above are unreliable."
+                } else {
+                    log.warn "Phylogeny group ${meta.id} has ${n} isolates: too few for Gubbins and IQ-TREE (they need 3 or more). " +
+                        "Reporting SNP distances from the core alignment only, without recombination filtering."
+                }
                 return [meta, aln]
         }
 
@@ -209,17 +241,17 @@ workflow PHYLOGENY {
     GUBBINS(ch_clean.tree.map { _meta, aln -> aln })
     ch_snps = GUBBINS.out.fasta.map { fasta -> [[id: fasta.name.tokenize('.')[0]], fasta] }
 
-    // A group whose isolates differ by no SNPs outside recombination has an empty filtered alignment: IQ-TREE
-    // stops with "Unknown sequence type". Such a group gets no tree (with a warning), but still its SNP
+    // A group whose isolates differ by no SNPs outside recombination has an empty filtered alignment, or one
+    // whose few columns hold only N, '-' or '?': IQ-TREE stops with "Unknown sequence type". Such a group gets no tree (with a warning), but still its SNP
     // distances (all 0). Stub runs write empty placeholder files, so the check is skipped there.
     ch_tree_input = ch_snps
         .branch { meta, fasta ->
-            tree: workflow.stubRun || alignmentLength(fasta) > 0
+            tree: workflow.stubRun || alignmentVariableSites(fasta) > 0
                 return [meta, fasta]
             no_sites: true
-                log.warn "Phylogeny group ${meta.id}: no SNP sites left after Gubbins (the isolates are identical " +
-                    "outside recombination), so no tree is built; its SNP distances are all 0. Check the group's " +
-                    "core alignment and Gubbins recombination predictions."
+                log.warn "Phylogeny group ${meta.id}: no variable A/C/G/T sites left after Gubbins (the isolates do not " +
+                    "differ outside recombination and missing data), so no tree is built. Check the group's core " +
+                    "alignment, the isolates' coverage, and Gubbins' recombination predictions."
                 return [meta, fasta]
         }
     IQTREE(ch_tree_input.tree.map { meta, fasta -> [meta, fasta, []] }, [], [], [], [], [], [], [], [], [], [], [], [])
@@ -260,11 +292,11 @@ def readReferenceSheet(sheet) {
 }
 
 //
-// First ST-specific row for this species, otherwise the first species-wide row
+// First ST-specific row for this species (when an ST is given), otherwise the first species-wide row
 //
 def chooseReference(List rows, String species, String st) {
     def bySpecies = rows.findAll { row -> species.toLowerCase().startsWith(row.species.toLowerCase()) }
-    return bySpecies.find { row -> row.st && row.st == st } ?: bySpecies.find { row -> !row.st }
+    return (st ? bySpecies.find { row -> row.st && row.st == st } : null) ?: bySpecies.find { row -> !row.st }
 }
 
 //
@@ -276,20 +308,63 @@ def speciesLabel(String species) {
 }
 
 //
-// Length of the first sequence in a FASTA alignment (0 for an empty alignment)
+// Gubbins' default --filter-percentage: sequences with more missing data (%) are left out
 //
-def alignmentLength(fasta) {
-    def length = 0
-    def inFirst = false
-    for (line in fasta.readLines()) {
+def gubbinsMaxMissing() { return 25.0 }
+
+//
+// Percentage of missing data (N, '-', '?', X) per sequence of an alignment, in file order (reference first):
+// [[name: , missing: ], ...]. Read line by line, so long single-line sequences are fine.
+//
+def alignmentMissing(fasta) {
+    def recs = []
+    def name = null
+    long total = 0
+    long gaps = 0
+    fasta.eachLine { line ->
         if (line.startsWith('>')) {
-            if (inFirst) { break }
-            inFirst = true
-        } else if (inFirst) {
-            length += line.trim().length()
+            if (name != null) { recs << [name: name, missing: total ? 100.0 * gaps / total : 100.0] }
+            name = line.substring(1).trim().tokenize(' ')[0]
+            total = 0
+            gaps = 0
+        } else if (name != null) {
+            def s = line.trim()
+            total += s.length()
+            gaps += s.length() - s.replaceAll(/[NnXx?-]/, '').length()
         }
     }
-    return length
+    if (name != null) { recs << [name: name, missing: total ? 100.0 * gaps / total : 100.0] }
+    return recs
+}
+
+//
+// Number of alignment columns where at least two sequences carry different bases (A, C, G or T).
+// Columns of only N, '-' or '?' do not count: IQ-TREE cannot detect the sequence type from them.
+//
+def alignmentVariableSites(fasta) {
+    def seqs = []
+    def current = null
+    fasta.eachLine { line ->
+        if (line.startsWith('>')) {
+            if (current != null) { seqs << current.toString().toUpperCase() }
+            current = new StringBuilder()
+        } else if (current != null) {
+            current.append(line.trim())
+        }
+    }
+    if (current != null) { seqs << current.toString().toUpperCase() }
+    if (seqs.size() < 2) { return 0 }
+    def length = seqs*.length().min()
+    def variable = 0
+    for (int i = 0; i < length; i++) {
+        def bases = [] as Set
+        for (seq in seqs) {
+            def c = seq.charAt(i)
+            if (c == ('A' as char) || c == ('C' as char) || c == ('G' as char) || c == ('T' as char)) { bases << c }
+        }
+        if (bases.size() >= 2) { variable++ }
+    }
+    return variable
 }
 
 //

@@ -13,6 +13,7 @@
 #     mkdir -p logs                          # Slurm does not create the log folder; the job fails without it
 #     sbatch submit_neonatal_amr_assemblies.sbatch                                  # K. pneumoniae (default)
 #     sbatch --export=ALL,SPECIES=ecoli submit_neonatal_amr_assemblies.sbatch       # E. coli
+#     sbatch --export=ALL,PHYLO_GROUPING=kleborate submit_neonatal_amr_assemblies.sbatch   # one tree per ST instead
 #
 # Samplesheets in another folder:
 #     sbatch --export=ALL,SPECIES=ecoli,ASSEMBLY_DIR=/path/to/samplesheets submit_neonatal_amr_assemblies.sbatch
@@ -59,6 +60,11 @@ OUTDIR="${OUTDIR:-${BASE_DIR}/outdir_${RUN_NAME}}"
 WORKDIR="${WORKDIR:-${BASE_DIR}/work}"
 MIN_GROUP="${MIN_GROUP:-3}"                                       # --phylo_min_group_size
 PHYLO_METHOD="${PHYLO_METHOD:-ska2}"                            # --phylo_method: snippy, ska2 or both
+# --phylo_grouping: species   = all isolates of the species in one group, whatever the ST (one tree, one SNP matrix)
+#                   kleborate = one group per species + ST (one tree and SNP matrix per ST)
+#                   samplesheet = the samplesheet's phylo_group column
+# Isolates without an ST from Kleborate are left out in species and kleborate modes.
+PHYLO_GROUPING="${PHYLO_GROUPING:-species}"
 AMRFINDER_DB="${AMRFINDER_DB:-${SHARED}/databases/amrfinderplus/amrfinderdb.tar.gz}"   # shared AMRFinderPlus database (course/TRAINER_GUIDE.md, 5.1)
 
 # Nextflow keeps its run history (needed by -resume) in the folder it starts from.
@@ -89,6 +95,11 @@ fail() { echo "[ERROR] $*" >&2; exit 1; }
 [[ -f "${PIPELINE_DIR}/main.nf" ]]           || fail "main.nf not found in ${PIPELINE_DIR}; run sbatch from the pipeline folder or set PIPELINE_DIR"
 [[ -f "${PIPELINE_DIR}/conf/slurm.config" ]] || fail "conf/slurm.config not found in ${PIPELINE_DIR}"
 [[ -f "${INPUT}" ]]                          || fail "samplesheet not found: ${INPUT} (set ASSEMBLY_DIR or INPUT)"
+[[ "${PHYLO_GROUPING}" =~ ^(species|kleborate|samplesheet)$ ]] \
+    || fail "PHYLO_GROUPING must be species, kleborate or samplesheet (got '${PHYLO_GROUPING}')"
+grep -q "'species'" "${PIPELINE_DIR}/subworkflows/local/utils_neonatal_amr_pipeline/main.nf" \
+    || [[ "${PHYLO_GROUPING}" != species ]] \
+    || fail "this copy of the pipeline predates --phylo_grouping species: update ${PIPELINE_DIR}"
 [[ -e "${AMRFINDER_DB}" ]] || fail "AMRFinderPlus database not found: ${AMRFINDER_DB} (course/TRAINER_GUIDE.md, section 5.1)"
 head -n 1 "${INPUT}" | grep -q 'fasta' \
     || fail "${INPUT} has no fasta column: it is not an assembly samplesheet (for reads use submit_neonatal_amr_reads.sbatch)"
@@ -113,7 +124,7 @@ echo " Outdir     : ${OUTDIR}"
 echo " Work dir   : ${WORKDIR}"
 echo " Launch dir : ${LAUNCH_DIR}"
 echo " AMRFinder  : ${AMRFINDER_DB}"
-echo " Phylogeny  : ${PHYLO_METHOD}"
+echo " Phylogeny  : ${PHYLO_METHOD}, groups: ${PHYLO_GROUPING} (min ${MIN_GROUP} isolates)"
 echo "================================================="
 
 #-------------------------------------------------------------------------------
@@ -131,6 +142,7 @@ nextflow run "${PIPELINE_DIR}/main.nf" \
     -work-dir "${WORKDIR}" \
     --amrfinderplus_db "${AMRFINDER_DB}" \
     --phylo_min_group_size "${MIN_GROUP}" \
+    --phylo_grouping "${PHYLO_GROUPING}" \
     --phylo_method "${PHYLO_METHOD}" \
     -resume \
     || status=$?

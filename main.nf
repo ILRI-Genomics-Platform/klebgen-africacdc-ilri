@@ -124,7 +124,10 @@ def helpMessage() {
 
     Phylogeny / transmission:
       --skip_phylogeny         Skip the phylogeny step                 [${params.skip_phylogeny}]
-      --phylo_grouping         kleborate: group by Kleborate species + ST, reference
+      --phylo_grouping         species: one group per Kleborate species, any ST (all
+                                        K. pneumoniae together, all E. coli together),
+                                        one reference per species from --phylo_reference_sheet
+                               kleborate: group by Kleborate species + ST, reference
                                           per species/ST from --phylo_reference_sheet
                                samplesheet: group by the phylo_group column
                                                                        [${params.phylo_grouping}]

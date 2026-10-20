@@ -48,7 +48,7 @@ does: take each isolate's **species from Kleborate** (Day 3), then the reference
 pipeline's reference sheet, `conf/phylo_references.csv`. For *Klebsiella pneumoniae* that is **NTUH-K2044**
 (accession AP006725.1): a complete, well-annotated chromosome (no plasmids, which are gained and lost too often
 to follow the same history). Using the same reference as the pipeline also means you can compare your tree with
-the pipeline's `Kpneumoniae_ST39` results.
+the pipeline's results (`Kpneumoniae`, or `Kpneumoniae_ST39` with `--phylo_grouping kleborate`).
 
 ```bash
 use_tools phylo
@@ -155,7 +155,7 @@ snp-sites -c ST39.filtered_polymorphic_sites.fasta > ST39.core_snps.fasta
 
 # GTR+G with ascertainment-bias correction (+ASC), because only variable sites are used;
 # 1000 ultrafast bootstraps for branch support
-iqtree -s ST39.core_snps.fasta -m GTR+G+ASC -B 1000 -T $THREADS --prefix ST39
+iqtree -s ST39.core_snps.fasta -st DNA -m GTR+G+ASC -B 1000 -T $THREADS --prefix ST39
 ls ST39.treefile ST39.contree
 ```
 
@@ -248,7 +248,7 @@ alignment exactly as on Snippy's. Your trainers ran the training set this way; c
 
 ```bash
 P=$SHARED/precomputed/pipeline_results/06_phylogeny
-ls $P                                          # Kpneumoniae_ST39/ and Kpneumoniae_ST39_ska2/, ...
+ls $P                                          # <group>/ and <group>_ska2/: Kpneumoniae/ (per ST: Kpneumoniae_ST39/), ...
 python3 $SHARED/neonatal-amr-nf/bin/compare_snp_methods.py --phylo $P \
     --threshold 20 --out $RESULTS/06_phylogeny/snippy_vs_ska2
 expand -t 14 $RESULTS/06_phylogeny/snippy_vs_ska2_pairs.tsv | less -S

@@ -1,18 +1,23 @@
 #!/usr/bin/env bash
 #
-# Step 11 - core-genome SNP phylogeny and SNP distances per species + ST group
+# Step 11 - core-genome SNP phylogeny and SNP distances per species (or per species + ST) group
 #           (pipeline: PHYLOGENY -> SNIPPY_RUN / SNIPPY_CONTIGS, SNIPPY_CORE and/or SKA2, then SNIPPY_CLEAN,
 #            GUBBINS, IQTREE, SNPDISTS)
 #
 #   bash step_by_step/11_phylogeny.sh                          # every sample in the samplesheet
 #   bash step_by_step/11_phylogeny.sh S1 S2 S3                 # only these samples
 #   PHYLO_METHOD=both bash step_by_step/11_phylogeny.sh        # Snippy and SKA2, then compare them
+#   PHYLO_GROUPING=st bash step_by_step/11_phylogeny.sh        # one group per species + ST instead of per species
 #
 # Needs: step 07 (Kleborate: species and ST) and step 01 (trimmed reads) or an assembly.
 #
-#   11a Group     : isolates are grouped by Kleborate species + ST (e.g. Kpneumoniae_ST39): transmission is
-#                   only plausible between isolates of the same ST. Each group gets the reference genome
-#                   listed for its species in conf/phylo_references.csv (an ST-specific row wins if there is one).
+#   11a Group     : PHYLO_GROUPING (config.sh; the pipeline's --phylo_grouping)
+#                   species (default): all isolates of a Kleborate species in one group (e.g. Kpneumoniae),
+#                     whatever their ST, mapped to the species reference in conf/phylo_references.csv: one SNP
+#                     matrix and tree for every isolate. Transmission is only plausible within an ST, so read
+#                     the close pairs with their STs.
+#                   st: one group per Kleborate species + ST (e.g. Kpneumoniae_ST39); an ST-specific row in
+#                     conf/phylo_references.csv wins over the species row.
 #   How SNPs are found: PHYLO_METHOD (config.sh; the pipeline's --phylo_method) = snippy (default), ska2 or both
 #   snippy
 #   11b Snippy    : map each isolate's trimmed reads to the reference and call SNPs (assemblies: snippy --ctgs)
@@ -46,7 +51,8 @@ source "$(dirname "$0")/config.sh"
 
 phy="${OUTDIR}/06_phylogeny"; mkdir -p "$phy"
 case "${PHYLO_METHOD}" in snippy|ska2|both) ;; *) fail "PHYLO_METHOD must be snippy, ska2 or both (got '${PHYLO_METHOD}')" ;; esac
-info "SNP method: ${PHYLO_METHOD}"
+case "${PHYLO_GROUPING}" in species|st) ;; *) fail "PHYLO_GROUPING must be species or st (got '${PHYLO_GROUPING}')" ;; esac
+info "SNP method: ${PHYLO_METHOD}; groups: ${PHYLO_GROUPING}"
 
 # ---------------------------------------------------------------- 11a group isolates and pick references
 kleborate_value() {   # kleborate_value TABLE species|ST   (same columns as the pipeline reads)
@@ -65,7 +71,7 @@ reference_for() {     # reference_for "Klebsiella pneumoniae" ST39 -> accession 
         END { print (hit_st ? hit_st : hit_sp) }' "${REFERENCE_SHEET}"
 }
 
-step "11a Groups (Kleborate species + ST) and references"
+step "11a Groups (Kleborate species$([ "${PHYLO_GROUPING}" = st ] && echo ' + ST')) and references"
 declare -A group_of ref_of members
 if [ $# -gt 0 ]; then samples=$(printf '%s\n' "$@"); else samples=$(all_samples); fi
 for s in $samples; do
@@ -75,10 +81,11 @@ for s in $samples; do
     if [ -z "$sp" ] || [ -z "$st" ] || [ "$st" = NA ] || [ "$st" = "-" ]; then
         warn "$s: no species/ST from Kleborate ('$sp', '$st'); left out"; continue
     fi
+    [ "${PHYLO_GROUPING}" = species ] && st=""       # species group and species reference only
     acc=$(reference_for "$sp" "$st")
     if [ -z "$acc" ]; then warn "$s: '$sp' has no reference in ${REFERENCE_SHEET}; left out"; continue; fi
     read -r genus epithet _ <<< "$sp"
-    g=$(echo "${genus:0:1}${epithet}_${st}" | tr -cd 'A-Za-z0-9_-')
+    g=$(echo "${genus:0:1}${epithet}${st:+_${st}}" | tr -cd 'A-Za-z0-9_-')
     group_of[$s]=$g; ref_of[$g]="${REFERENCES}/${acc}.fasta"; members[$g]="${members[$g]:-} $s"
 done
 for g in "${!members[@]}"; do info "$(printf '%-22s %-14s %s' "$g" "$(basename "${ref_of[$g]}" .fasta)" "${members[$g]}")"; done
@@ -100,7 +107,7 @@ tree_and_distances() {   # tree_and_distances NAME DIR N_ISOLATES   (DIR holds N
         step "11e IQ-TREE: $name"
         cd "$dir"
         run IQTREE iqtree \
-            -m GTR+G -B 1000 \
+            -st DNA -m GTR+G -B 1000 \
             -s "${phy}/gubbins/${name}.filtered_polymorphic_sites.fasta" \
             -pre "$name" \
             -nt AUTO -ntmax "${THREADS}" -mem "${MEM_GB}G"

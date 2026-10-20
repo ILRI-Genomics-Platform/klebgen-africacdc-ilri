@@ -397,9 +397,10 @@ also be given on the command line with `--shared_container_dir`, which overrides
 
 ### 7.4 Phylogeny reference genomes
 
-By default the pipeline groups isolates by the species and ST that Kleborate reports (`Kpneumoniae_ST39`, ...)
+By default the pipeline puts all isolates of a species in one group, whatever their ST (`Kpneumoniae`, `Ecoli`;
+`--phylo_grouping kleborate` makes one group per species + ST instead, e.g. `Kpneumoniae_ST39`),
 and maps each group to the reference genome listed for its species in `conf/phylo_references.csv`
-(*K. pneumoniae*: NTUH-K2044; *K. quasipneumoniae* and *K. variicola*: ATCC 700603; *E. coli*: K-12 MG1655).
+(*K. pneumoniae*: NTUH-K2044; *K. quasipneumoniae*: ATCC 700603; *K. variicola*: DSM 15968; *E. coli*: K-12 MG1655).
 Download them once, on a node with internet access, into the folder the site configs name
 (`phylo_reference_dir`, `$SHARED/references`):
 

@@ -330,7 +330,7 @@ if want phylo && [ ! -s "$D/ST39_pairs.tsv" ]; then
           snippy-clean_full_aln core.full.aln > clean.full.aln &&
           run_gubbins.py --prefix ST39 --threads "$THREADS" clean.full.aln &&
           snp-sites -c ST39.filtered_polymorphic_sites.fasta > ST39.core_snps.fasta &&
-          iqtree -s ST39.core_snps.fasta -m GTR+G+ASC -B 1000 -T "$THREADS" --prefix ST39 &&
+          iqtree -s ST39.core_snps.fasta -st DNA -m GTR+G+ASC -B 1000 -T "$THREADS" --prefix ST39 &&
           snp-dists ST39.core_snps.fasta > ST39_snp_dists_filtered.tsv &&
           snp-dists core.aln > ST39_snp_dists_raw.tsv &&
           awk -F'\t' -v c="$CLUSTER" 'BEGIN{n=split(c,a," "); for(i=1;i<=n;i++) inC[a[i]]=1}

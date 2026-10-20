@@ -2,7 +2,7 @@
 """
 fetch_references.py - download the phylogeny reference genomes once, into a shared read-only folder.
 
-The pipeline (--phylo_grouping kleborate, the default) maps each species/ST group to a reference listed in
+The pipeline (--phylo_grouping species, the default, or kleborate) maps each species/ST group to a reference listed in
 conf/phylo_references.csv and reads it from <dir>/<accession>.fasta. Run this once as the trainer, with
 network access (e.g. on the login node); participants and compute nodes only read the files.
 
@@ -67,7 +67,13 @@ def check_fasta(data, acc):
             length += len(seq)
     if length < 100_000:
         raise ValueError(f"only {length} bp: is {acc} a complete genome or chromosome?")
-    return length, contigs
+    return length, contigs, text.split("\n", 1)[0][1:].strip()
+
+
+def species_matches(species, title):
+    """True if the FASTA header names the sheet's species (genus and epithet, e.g. 'Klebsiella variicola')."""
+    words = species.lower().split()[:2]
+    return all(w in title.lower() for w in words)
 
 
 def download(acc):
@@ -78,8 +84,8 @@ def download(acc):
                 req = urllib.request.Request(url.format(acc=acc), headers={"User-Agent": "neonatal-amr-nf"})
                 with urllib.request.urlopen(req, timeout=120) as resp:
                     data = resp.read()
-                length, contigs = check_fasta(data, acc)
-                return data, name, length, contigs
+                length, contigs, title = check_fasta(data, acc)
+                return data, name, length, contigs, title
             except Exception as exc:  # network error or bad content: retry, then next source
                 errors.append(f"{name} (attempt {attempt}): {exc}")
                 if isinstance(exc, ValueError):
@@ -142,12 +148,12 @@ def main():
                     manifest[rec["accession"]] = rec
             os.chmod(manifest_path, 0o644)
 
-        failed = []
+        failed, mismatched = [], []
         for acc in missing:
             row = accessions[acc]
             print(f"Downloading {acc} ({row['name']})...", flush=True)
             try:
-                data, source, length, contigs = download(acc)
+                data, source, length, contigs, title = download(acc)
             except RuntimeError as exc:
                 print(f"  FAILED: {exc}", file=sys.stderr)
                 failed.append(acc)
@@ -162,16 +168,25 @@ def main():
             manifest[acc] = {
                 "accession": acc, "name": row["name"], "species": row["species"], "length_bp": length,
                 "contigs": contigs, "md5": hashlib.md5(data).hexdigest(), "source": source,
-                "downloaded": datetime.date.today().isoformat(),
+                "downloaded": datetime.date.today().isoformat(), "title": title,
             }
-            print(f"  {length:,} bp in {contigs} sequence(s) from {source}")
+            print(f"  {length:,} bp in {contigs} sequence(s) from {source}: {title}")
+            if not species_matches(row["species"], title):
+                print(f"  WARNING: the sheet lists {acc} for '{row['species']}', but its FASTA header says "
+                      f"'{title}'. Isolates of that species mapped to the wrong species lose about half of the "
+                      f"genome as missing data, and Gubbins then drops them. Check the accession in {args.sheet}.",
+                      file=sys.stderr)
+                mismatched.append(acc)
 
         with open(manifest_path, "w", newline="") as handle:
-            cols = ["accession", "name", "species", "length_bp", "contigs", "md5", "source", "downloaded"]
+            cols = ["accession", "name", "species", "length_bp", "contigs", "md5", "source", "downloaded", "title"]
             writer = csv.DictWriter(handle, fieldnames=cols, delimiter="\t")
             writer.writeheader()
             for acc in sorted(manifest):
                 writer.writerow({c: manifest[acc].get(c, "") for c in cols})
+        if mismatched:
+            print(f"WARNING: species in the FASTA header differs from the sheet for {', '.join(mismatched)} (see above).",
+                  file=sys.stderr)
         if failed:
             sys.exit(f"ERROR: could not download {', '.join(failed)}. Check the network (NCBI and ENA) and "
                      f"the accession(s) in {args.sheet}, then run this script again.")
