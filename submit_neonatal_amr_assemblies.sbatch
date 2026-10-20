@@ -52,12 +52,13 @@ ASSEMBLY_DIR="${ASSEMBLY_DIR:-${HOME}/trainings/africacdc-pgi-klebgen/results/Et
 SPECIES="${SPECIES:-kpneumoniae}"                                 # kpneumoniae | ecoli
 
 RUN_NAME="${RUN_NAME:-ethiopia_${SPECIES}}"
-INPUT="${INPUT:-${HOME}/trainings/africacdc-pgi-klebgen/results/Ethiopia/samplesheet_assemblies_${SPECIES}.csv}"
+# INPUT="${INPUT:-${HOME}/trainings/africacdc-pgi-klebgen/results/Ethiopia/samplesheet_assemblies_${SPECIES}.csv}"
+INPUT="${INPUT:-${HOME}/trainings/africacdc-pgi-klebgen/metadata/Ethiopia_kpn_blood_le30d_samplesheet_${SPECIES}.csv}"
 OUTDIR="${OUTDIR:-${BASE_DIR}/outdir_${RUN_NAME}}"
 
 WORKDIR="${WORKDIR:-${BASE_DIR}/work}"
 MIN_GROUP="${MIN_GROUP:-3}"                                       # --phylo_min_group_size
-PHYLO_METHOD="${PHYLO_METHOD:-snippy}"                            # --phylo_method: snippy, ska2 or both
+PHYLO_METHOD="${PHYLO_METHOD:-ska2}"                            # --phylo_method: snippy, ska2 or both
 AMRFINDER_DB="${AMRFINDER_DB:-${SHARED}/databases/amrfinderplus/amrfinderdb.tar.gz}"   # shared AMRFinderPlus database (course/TRAINER_GUIDE.md, 5.1)
 
 # Nextflow keeps its run history (needed by -resume) in the folder it starts from.

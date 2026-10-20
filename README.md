@@ -178,6 +178,12 @@ nextflow run main.nf -profile singularity -c conf/slurm.config \
     --input ethiopia/samplesheet_assemblies.csv --outdir results_ethiopia
 ```
 
+Assemblies made on [Terra](https://terra.bio) can be fetched first with `bin/download_terra_outputs.py` (or
+`bin/download_terra_outputs.sbatch` on the HPC). It reads the workspace's data table (TSV), downloads the chosen
+output columns in parallel (`assembly_fasta` by default; also Kleborate and MLST reports), skips files already
+downloaded, and writes `assemblies/<sample>_contigs.fasta`, the names this script expects (`--by-country` gives
+one folder per country). It needs the Google Cloud CLI, logged in with `gcloud auth login`.
+
 To analyse the species separately, add `--split-by-species`: it writes `<out>_kpneumoniae.csv` and
 `<out>_ecoli.csv`, each with its own metadata table (`metadata_assemblies_kpneumoniae.tsv`, ...), so each species
 gets its own run, output folder and figures. `--species kpneumoniae` (or `ecoli`) keeps only one species.
