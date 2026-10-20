@@ -251,7 +251,7 @@ use_precomputed() {
     local p src dest before after status=0
     if [ $# -eq 0 ]; then
         _tools_msg "usage: use_precomputed <folder or file under \$RESULTS> ...   e.g. use_precomputed 01_qc/kraken2"
-        _tools_msg "available: $(cd "${PRECOMPUTED}" 2>/dev/null && find . -mindepth 2 -maxdepth 2 | sed 's#^\./##' | sort | tr '\n' ' ')"
+        _tools_msg "available: $(cd "${PRECOMPUTED}" 2>/dev/null && find . -mindepth 2 -maxdepth 2 ! -path './pipeline_results/*' | sed 's#^\./##' | sort | tr '\n' ' ')"
         return 1
     fi
     [ -n "${RESULTS:-}" ] || { _tools_msg "ERROR: RESULTS is not set (Day 1, section 0.1)"; return 1; }
