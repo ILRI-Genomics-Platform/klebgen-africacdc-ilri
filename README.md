@@ -162,6 +162,12 @@ EPHEC201,E. coli,/data/ethiopia/contigs/EPHEC201_contigs.fasta,
 | Kleborate, Kaptive, AMRFinderPlus, MOB-suite, *E. coli* typing, Prokka | run | run |
 | Phylogeny | Snippy maps the reads | Snippy maps the contigs (`snippy --ctgs`, local module `snippy/contigs`) |
 
+If an isolate's genome is not the species given in the samplesheet (a lab label that the genome does not
+support), Kleborate types it with the preset that matches (*K. pneumoniae* complex, *K. oxytoca* complex or
+*E. coli*), or records it as "not KpSC, KoSC or E. coli"; either way its table in `03_typing/kleborate/` gets a
+`pipeline_note` column saying so, and the run continues. List them with
+`grep -l pipeline_note results/03_typing/kleborate/*.txt`.
+
 One run uses one kind of input. Contigs must be uncompressed FASTA (`.fasta`, `.fa`, `.fna`). Without reads there is
 no read-level QC or contamination check, so look at QUAST (assembly size, N50, contig count) and Kleborate's species
 and contig statistics before trusting a genome; SNPs called from contigs are only as good as the assembly.
