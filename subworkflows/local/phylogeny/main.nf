@@ -209,7 +209,20 @@ workflow PHYLOGENY {
     GUBBINS(ch_clean.tree.map { _meta, aln -> aln })
     ch_snps = GUBBINS.out.fasta.map { fasta -> [[id: fasta.name.tokenize('.')[0]], fasta] }
 
-    IQTREE(ch_snps.map { meta, fasta -> [meta, fasta, []] }, [], [], [], [], [], [], [], [], [], [], [], [])
+    // A group whose isolates differ by no SNPs outside recombination has an empty filtered alignment: IQ-TREE
+    // stops with "Unknown sequence type". Such a group gets no tree (with a warning), but still its SNP
+    // distances (all 0). Stub runs write empty placeholder files, so the check is skipped there.
+    ch_tree_input = ch_snps
+        .branch { meta, fasta ->
+            tree: workflow.stubRun || alignmentLength(fasta) > 0
+                return [meta, fasta]
+            no_sites: true
+                log.warn "Phylogeny group ${meta.id}: no SNP sites left after Gubbins (the isolates are identical " +
+                    "outside recombination), so no tree is built; its SNP distances are all 0. Check the group's " +
+                    "core alignment and Gubbins recombination predictions."
+                return [meta, fasta]
+        }
+    IQTREE(ch_tree_input.tree.map { meta, fasta -> [meta, fasta, []] }, [], [], [], [], [], [], [], [], [], [], [], [])
     SNPDISTS(ch_snps.mix(ch_clean.pair))
 
     emit:
@@ -260,6 +273,23 @@ def chooseReference(List rows, String species, String st) {
 def speciesLabel(String species) {
     def words = species.tokenize(' ')
     return words.size() >= 2 ? "${words[0][0].toUpperCase()}${words[1]}" : words[0]
+}
+
+//
+// Length of the first sequence in a FASTA alignment (0 for an empty alignment)
+//
+def alignmentLength(fasta) {
+    def length = 0
+    def inFirst = false
+    for (line in fasta.readLines()) {
+        if (line.startsWith('>')) {
+            if (inFirst) { break }
+            inFirst = true
+        } else if (inFirst) {
+            length += line.trim().length()
+        }
+    }
+    return length
 }
 
 //
