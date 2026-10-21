@@ -435,6 +435,7 @@ mirrors a participant's `$RESULTS`, folder for folder, and `use_precomputed 01_q
 | `02_assembly/checkm2/` | CheckM2 on every Shovill assembly | practice isolates | 2 |
 | `02_assembly/autocycler/<sample>/autocycler_out/` | Autocycler consensus, 3 hybrid isolates | `CHI11E` | 2 |
 | `02_assembly/hybrid/<sample>.hybrid.fasta` | polished hybrid assemblies | `CHI11E` | 2 |
+| `02_assembly/hybrid/<sample>/` | each polishing step: `medaka/consensus.fasta`, `medaka.fasta`, `polypolish.fasta`, `pypolca/pypolca_corrected.fasta` (+ `.report`, `.vcf`), 3 hybrid isolates | `CHI11E` | 2 |
 | `03_typing/kleborate/` | Kleborate on every best assembly | practice isolates | 3 |
 | `04_amr/amrfinderplus/<sample>.tsv` | AMRFinderPlus, one file per isolate | practice isolates | 3 |
 | `05_plasmids/hybrid/<sample>/`, `05_plasmids/shortread/<sample>/` | MOB-suite on hybrid and Shovill assemblies | `CHI11E` | 4–5 |

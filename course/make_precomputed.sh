@@ -21,6 +21,9 @@
 #   nanopore 01_qc/nanoplot/                        -                                    Filtlong + NanoPlot, 3 hybrid isolates
 #   kraken2  01_qc/kraken2/                         Kraken2 reports (same database)      Bracken with the course's -r 150 (seconds)
 #   assembly 02_assembly/{shovill,autocycler,hybrid}/  assemblies                        -
+#   polish   02_assembly/hybrid/<sample>/           Medaka, Polypolish, Pypolca results  the Day 2 (2.5) commands, for
+#              (medaka/, medaka.fasta,              (same tools and options as 2.5)      any of these the run did not keep
+#               polypolish.fasta, pypolca/)
 #   checkm2  02_assembly/checkm2/                   -                                    CheckM2, every Shovill assembly
 #   kleborate 03_typing/kleborate/                  per-sample tables, merged            -
 #   amr      04_amr/amrfinderplus/                  per-sample tables, + Name column     -
@@ -48,7 +51,7 @@ P="${PRECOMPUTED:-$SHARED/precomputed}"                                      # w
 WORK="${WORK:-/var/scratch/global/$USER/neonatal-amr/precompute_work}"      # trimmed reads, links: not shared
 PIPE="${PIPE:-$P/pipeline_results}"                                          # the training pipeline run (section 8.1)
 SHEET="${SHEET:-$SHARED/samplesheet.csv}"
-STEPS="${STEPS:-reads fastp nanopore kraken2 assembly checkm2 kleborate amr plasmids snippy phylo ska2 kaptive}"
+STEPS="${STEPS:-reads fastp nanopore kraken2 assembly polish checkm2 kleborate amr plasmids snippy phylo ska2 kaptive}"
 THREADS="${SLURM_CPUS_PER_TASK:-${THREADS:-4}}"
 HYBRIDS="CHI11E CNS1F1 1013757"
 ST39="CAA65Z CAA99X CAA47J CAA4X5 CAA574 CAA5XX CAA5YM CAA4GD D29438 BKR8JH BHB7VE CHI11E"   # as on Day 6
@@ -192,6 +195,70 @@ if want assembly; then
         [ -f "$R/autocycler/$s.autocycler.gfa" ] && cpn "$R/autocycler/$s.autocycler.gfa" "$P/02_assembly/autocycler/$s/autocycler_out/consensus_assembly.gfa"
     done
     mkdir -p "$P/02_assembly/hybrid" && cpn "$R"/hybrid/*.hybrid.fasta "$P/02_assembly/hybrid/" 2>/dev/null
+fi
+
+# Each polishing step of Day 2 (2.5), in the folders the page uses: $RESULTS/02_assembly/hybrid/<s>/
+#   medaka/consensus.fasta and medaka.fasta  ->  polypolish.fasta  ->  pypolca/pypolca_corrected.fasta (.report, .vcf)
+# Taken from the pipeline run where it kept them (it runs the same commands: Medaka on the Filtlong reads and the
+# Autocycler consensus, Polypolish with bwa mem -a, Pypolca --careful); otherwise made here with the page's commands.
+if want polish; then
+    step "Polishing steps (hybrid isolates)"
+    R=$PIPE/02_assembly/hybrid
+    for s in $HYBRIDS; do
+        draft=$P/02_assembly/autocycler/$s/autocycler_out/consensus_assembly.fasta
+        out=$P/02_assembly/hybrid/$s
+        mkdir -p "$out/medaka" "$out/pypolca"
+        # 1. Medaka
+        if [ ! -s "$out/medaka.fasta" ]; then
+            if [ -s "$R/medaka/$s.medaka.fa.gz" ]; then
+                gzip -cd "$R/medaka/$s.medaka.fa.gz" > "$out/medaka/consensus.fasta" && from_pipeline
+            elif [ -s "$draft" ] && [ -e "$READS/${s}_ont.fastq.gz" ]; then
+                [ -s "$WORK/trimmed/${s}_ont.fastq.gz" ] || \
+                    filtlong --min_length 1000 --keep_percent 90 "$READS/${s}_ont.fastq.gz" | gzip > "$WORK/trimmed/${s}_ont.fastq.gz"
+                medaka_consensus -i "$WORK/trimmed/${s}_ont.fastq.gz" -d "$draft" -o "$out/medaka" -t "$THREADS" \
+                    && ran_here || { fail "medaka:$s"; continue; }
+            else
+                fail "medaka:$s (no Autocycler assembly or Nanopore reads)"; continue
+            fi
+            cp "$out/medaka/consensus.fasta" "$out/medaka.fasta"
+        fi
+        # 2. Polypolish
+        if [ ! -s "$out/polypolish.fasta" ]; then
+            if [ -s "$R/polypolish/$s.polypolish.fasta" ]; then
+                cp "$R/polypolish/$s.polypolish.fasta" "$out/polypolish.fasta" && from_pipeline
+            else
+                ensure_trimmed "$s" || { fail "polypolish:$s (fastp)"; continue; }
+                tmp=$WORK/polish_$s; mkdir -p "$tmp"; cp "$out/medaka.fasta" "$tmp/medaka.fasta"
+                bwa index "$tmp/medaka.fasta" 2>/dev/null
+                bwa mem -t "$THREADS" -a "$tmp/medaka.fasta" "$WORK/trimmed/${s}_R1.fastq.gz" > "$tmp/aln_1.sam" 2>/dev/null
+                bwa mem -t "$THREADS" -a "$tmp/medaka.fasta" "$WORK/trimmed/${s}_R2.fastq.gz" > "$tmp/aln_2.sam" 2>/dev/null
+                polypolish filter --in1 "$tmp/aln_1.sam" --in2 "$tmp/aln_2.sam" --out1 "$tmp/filt_1.sam" --out2 "$tmp/filt_2.sam" \
+                    && polypolish polish "$tmp/medaka.fasta" "$tmp/filt_1.sam" "$tmp/filt_2.sam" > "$out/polypolish.fasta" \
+                    && ran_here || { fail "polypolish:$s"; rm -f "$out/polypolish.fasta"; continue; }
+                rm -rf "$tmp"
+            fi
+        fi
+        # 3. Pypolca (the page names its output folder pypolca/, so its files are pypolca_corrected.fasta, ...)
+        if [ ! -s "$out/pypolca/pypolca_corrected.fasta" ]; then
+            if [ -s "$R/$s.hybrid.fasta" ] && [ -s "$R/$s.hybrid/$s.hybrid.report" ]; then
+                cp "$R/$s.hybrid.fasta" "$out/pypolca/pypolca_corrected.fasta"
+                cp "$R/$s.hybrid/$s.hybrid.report" "$out/pypolca/pypolca.report"
+                [ -f "$R/$s.hybrid/$s.hybrid.vcf" ] && cp "$R/$s.hybrid/$s.hybrid.vcf" "$out/pypolca/pypolca.vcf"
+                from_pipeline
+            else
+                ensure_trimmed "$s" || { fail "pypolca:$s (fastp)"; continue; }
+                rm -rf "$out/pypolca"
+                pypolca run -a "$out/polypolish.fasta" \
+                    -1 "$WORK/trimmed/${s}_R1.fastq.gz" -2 "$WORK/trimmed/${s}_R2.fastq.gz" \
+                    -t "$THREADS" -o "$out/pypolca" --careful > "$WORK/pypolca_$s.log" 2>&1 \
+                    && ran_here || { fail "pypolca:$s"; continue; }
+                rm -f "$out"/pypolca/*.bam "$out"/pypolca/*.bai 2>/dev/null
+            fi
+        fi
+        # the final hybrid assembly, if the pipeline run had none
+        cpn "$out/pypolca/pypolca_corrected.fasta" "$P/02_assembly/hybrid/$s.hybrid.fasta"
+        echo "  $s: $(cd "$out" && ls -d medaka.fasta polypolish.fasta pypolca/pypolca_corrected.fasta 2>/dev/null | tr '\n' ' ')"
+    done
 fi
 
 # Assemblies named as on the course pages: $COURSE/assemblies/<s>.fasta (Shovill), <s>.hybrid.fasta, and best/

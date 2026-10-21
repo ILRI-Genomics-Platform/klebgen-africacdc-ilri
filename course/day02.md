@@ -158,6 +158,21 @@ cp $out/pypolca/pypolca_corrected.fasta $COURSE/assemblies/${s}.hybrid.fasta
 rm $out/*.sam
 ```
 
+> [!NOTE]
+> Medaka takes the longest (with 1 thread, allow 30–60 minutes). If a step has not finished in time, or stops with an
+> error, stop it (`Ctrl+C`), fill in the trainers' results for this isolate and carry on from the next step:
+>
+> ```bash
+> use_precomputed 02_assembly/hybrid/$s   # medaka/, medaka.fasta, polypolish.fasta, pypolca/: your own files are kept
+> ls $out
+> ```
+>
+> After Medaka, continue at `# 2. Short-read polishing`; after Polypolish, at `pypolca run`. Without Autocycler's
+> result (2.4), run `use_precomputed 02_assembly/autocycler` first. To skip polishing altogether, copy the end
+> result: `cp $out/pypolca/pypolca_corrected.fasta $COURSE/assemblies/${s}.hybrid.fasta`.
+>
+> `cat $out/pypolca/pypolca.report` shows how many errors Pypolca still corrected after Medaka and Polypolish.
+
 > [!TIP]
 > Medaka 2 can use a bacteria-specific model if your basecalling model supports it. Check
 > `medaka_consensus -h` for the `--bacteria` option.
