@@ -71,13 +71,13 @@ done
 
 quast.py $COURSE/assemblies/*.fasta -o $RESULTS/02_assembly/quast_shovill -t $THREADS
 # One row per assembly: contigs, total length, N50 and GC are the columns to look at
-less -S $RESULTS/02_assembly/quast_shovill/transposed_report.tsv
+column -t -s $'\t' $RESULTS/02_assembly/quast_shovill/transposed_report.tsv | less -S
 
 # CheckM2 on your practice isolates (a few minutes each with 1 thread)
 checkm2 predict --input $(for s in $PRACTICE; do echo $COURSE/assemblies/$s.fasta; done) -x fasta \
     --output-directory $RESULTS/02_assembly/checkm2_practice --threads $THREADS \
     --database_path $SHARED/databases/checkm2/CheckM2_database/uniref100.KO.1.dmnd
-cut -f1-3 $RESULTS/02_assembly/checkm2_practice/quality_report.tsv
+cut -f1-3 $RESULTS/02_assembly/checkm2_practice/quality_report.tsv | column -t -s $'\t'
 
 # The trainers' table for all 29: check your three rows, then look for problems
 use_precomputed 02_assembly/checkm2
