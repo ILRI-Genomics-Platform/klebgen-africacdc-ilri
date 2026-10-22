@@ -11,7 +11,8 @@
 | 3 | 13:30–15:00 | Plasmids, replicons and mobility; MOB-suite | 5 |
 | 4 | 15:30–17:00 | Which plasmid carries which gene? Short-read versus hybrid | 5 |
 
-**You will produce:** a genotype–phenotype agreement table for AMRFinderPlus and Kleborate, a regimen summary, and a plasmid table for the three
+**You will produce:** a genotype–phenotype agreement table for AMRFinderPlus and Kleborate, with sensitivity,
+specificity, PPV and NPV per antibiotic, a regimen summary, and a plasmid table for the three
 hybrid isolates.
 
 ## Learning objectives
@@ -150,6 +151,82 @@ found different genes, or one reports a gene the other files under a different d
 > **Very major error**: the genome says susceptible but the isolate is resistant. This is the dangerous one,
 > because a patient could get an antibiotic that does not work. **Major error**: the genome says resistant but the
 > isolate is susceptible, so a usable drug might be withheld.
+
+#### Contingency tables: sensitivity, specificity, PPV and NPV
+
+Treat the AST as the reference and the genome as the test. For each drug and tool, the comparisons above fill a
+2×2 table:
+
+| | AST resistant | AST susceptible |
+| --- | --- | --- |
+| **Genome predicts R** | true positive (TP) | false positive (FP) = major error |
+| **Genome predicts S** | false negative (FN) = very major error | true negative (TN) |
+
+| Measure | Formula | Question it answers |
+| --- | --- | --- |
+| Sensitivity | TP / (TP + FN) | Of the resistant isolates, how many did the genome catch? (1 − very major error rate) |
+| Specificity | TN / (TN + FP) | Of the susceptible isolates, how many did the genome call S? (1 − major error rate) |
+| PPV | TP / (TP + FP) | If the genome says R, how often is the isolate resistant? |
+| NPV | TN / (TN + FN) | If the genome says S, how often is the isolate susceptible? |
+| Agreement | (TP + TN) / n | How often do genome and AST agree? |
+
+```r
+# One drug first: the 2x2 table itself
+cmp |>
+  filter(tool == "AMRFinderPlus", drug == "Ceftriaxone") |>
+  mutate(across(c(genotype, phenotype), \(x) factor(x, levels = c("R", "S")))) |>
+  with(table(genome = genotype, AST = phenotype))
+
+# Every drug and tool: the four cells
+two_by_two <- cmp |>
+  mutate(cell = case_when(
+    genotype == "R" & phenotype == "R" ~ "TP",
+    genotype == "R" & phenotype == "S" ~ "FP",
+    genotype == "S" & phenotype == "R" ~ "FN",
+    genotype == "S" & phenotype == "S" ~ "TN"
+  )) |>
+  count(tool, drug, cell) |>
+  complete(tool, drug, cell = c("TP", "FP", "FN", "TN"), fill = list(n = 0)) |>
+  pivot_wider(names_from = cell, values_from = n)
+
+# A proportion with its exact 95% confidence interval, e.g. "88% (64-99) 15/17"
+prop_ci <- function(x, n) {
+  map2_chr(x, n, \(x, n) {
+    if (n == 0) return("NA (0/0)")
+    ci <- binom.test(x, n)$conf.int
+    sprintf("%.0f%% (%.0f-%.0f) %d/%d", 100 * x / n, 100 * ci[1], 100 * ci[2], x, n)
+  })
+}
+
+accuracy <- two_by_two |>
+  mutate(
+    n           = TP + FP + FN + TN,
+    sensitivity = prop_ci(TP, TP + FN),
+    specificity = prop_ci(TN, TN + FP),
+    PPV         = prop_ci(TP, TP + FP),
+    NPV         = prop_ci(TN, TN + FN),
+    agreement   = prop_ci(TP + TN, n)
+  ) |>
+  arrange(drug, tool)
+
+accuracy |> select(drug, tool, n, TP, FP, FN, TN)
+accuracy |> select(drug, tool, sensitivity, specificity, PPV, NPV, agreement) |> print(width = Inf)
+write_tsv(accuracy, "results/04_amr/genotype_vs_phenotype_accuracy.tsv")
+```
+
+Read the confidence intervals before the percentages. With about 25 tested isolates per drug, one isolate more or
+less moves a percentage by several points, and a cell of 0 (no resistant isolates for meropenem, say) gives
+`NA (0/0)` rather than a number.
+
+<details>
+<summary><b>Why are PPV and NPV less transferable than sensitivity and specificity?</b></summary>
+
+PPV and NPV depend on how common resistance is in the isolates tested. This set was chosen to include ESBL
+clusters and carbapenemase isolates, so resistance is more common than in a random sample, which raises the PPV
+and lowers the NPV. Sensitivity and specificity describe the test itself and change much less from one setting to
+another. Report all four, with the number of isolates behind each.
+
+</details>
 
 ### 4.7 Exercise: explain the disagreements
 
@@ -344,7 +421,8 @@ data for small plasmids.
 
 ## End-of-day checklist
 
-- [ ] `results/04_amr/genotype_vs_phenotype.tsv` written, and you can explain at least two disagreements.
+- [ ] `results/04_amr/genotype_vs_phenotype.tsv` and `genotype_vs_phenotype_accuracy.tsv` written, and you can explain at
+  least two disagreements.
 - [ ] Regimen table with predicted failure percentages, and a sentence on why they are not prevalence.
 - [ ] MOB-suite results for the three hybrid isolates, hybrid and short-read.
 - [ ] The plasmid table (5.2) is filled in.
