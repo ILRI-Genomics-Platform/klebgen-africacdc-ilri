@@ -11,14 +11,15 @@
 | 3 | 13:30–15:00 | Plasmids, replicons and mobility; MOB-suite | 5 |
 | 4 | 15:30–17:00 | Which plasmid carries which gene? Short-read versus hybrid | 5 |
 
-**You will produce:** a genotype–phenotype agreement table, a regimen summary, and a plasmid table for the three
+**You will produce:** a genotype–phenotype agreement table for AMRFinderPlus and Kleborate, a regimen summary, and a plasmid table for the three
 hybrid isolates.
 
 ## Learning objectives
 
 By the end of today you can:
 
-- Predict susceptibility from AMR genes and measure agreement with lab AST (very major and major errors).
+- Predict susceptibility from AMR genes (AMRFinderPlus and Kleborate) and measure agreement with lab AST (very major
+  and major errors).
 - Explain disagreements between genotype and phenotype.
 - Estimate how often WHO-recommended empiric neonatal regimens would fail, and say why that estimate is limited.
 - Reconstruct plasmids with MOB-suite and say which plasmid carries each resistance gene.
@@ -38,16 +39,36 @@ cd $COURSE
 R
 ```
 
+Two tools predicted resistance genes on Day 3: AMRFinderPlus (`results/04_amr/`) and Kleborate
+(`results/03_typing/kleborate/`). Turn each tool's genes into an S/R prediction per drug, then compare both with
+the lab's AST in the same way.
+
 ```r
 library(tidyverse)
 
 meta <- read_tsv("training_data/metadata_compact.tsv")
 ast  <- read_tsv("training_data/ast_compact.tsv", na = "NA")
-amr  <- read_tsv("results/04_amr/amrfinderplus_all.tsv") |>
+
+ast_long <- ast |>
+  pivot_longer(-sample, names_to = "ast_column", values_to = "phenotype") |>
+  filter(phenotype %in% c("S", "R"))          # intermediate (I) results left out
+
+# Genotype (S/R per sample and drug) against the AST, for either tool
+compare_ast <- function(pred) {
+  pred |>
+    inner_join(ast_long, by = c("sample", "ast_column")) |>
+    mutate(result = case_when(
+      genotype == phenotype                  ~ "agree",
+      genotype == "S" & phenotype == "R"     ~ "very major error (missed resistance)",
+      genotype == "R" & phenotype == "S"     ~ "major error (false resistance)"
+    ))
+}
+
+# ---- A. AMRFinderPlus: an isolate is predicted R if any hit's Subclass matches the pattern
+amr <- read_tsv("results/04_amr/amrfinderplus_all.tsv") |>
   rename(sample = Name, gene = any_of(c("Element symbol", "Gene symbol"))) |>
   select(sample, gene, Class, Subclass)
 
-# Prediction rules: an isolate is predicted R if any hit's Subclass matches the pattern
 rules <- tribble(
   ~drug,           ~ast_column,                    ~pattern,
   "Gentamicin",    "Gentamicin 10",                "GENTAMICIN",
@@ -68,21 +89,62 @@ pred <- rules |>
   ) |>
   mutate(genotype = if_else(hit, "R", "S"))
 
-ast_long <- ast |>
-  pivot_longer(-sample, names_to = "ast_column", values_to = "phenotype") |>
-  filter(phenotype %in% c("S", "R"))          # intermediate (I) results left out
+# ---- B. Kleborate: one column per drug class (AGly_acquired, Bla_ESBL_acquired, Flq_mutations, ...), each
+# holding that isolate's genes or mutations separated by ';' ('-' = none). An isolate is predicted R if a listed
+# column holds a gene matching the pattern ('.' = any entry).
+kleb_table <- read_tsv("results/03_typing/kleborate/klebsiella_pneumo_complex_output.txt",
+                       col_types = cols(.default = "c")) |>
+  rename(sample = 1)                                    # first column: the assembly (sample) name
 
-cmp <- pred |>
-  inner_join(ast_long, by = c("sample", "ast_column")) |>
-  mutate(result = case_when(
-    genotype == phenotype                  ~ "agree",
-    genotype == "S" & phenotype == "R"     ~ "very major error (missed resistance)",
-    genotype == "R" & phenotype == "S"     ~ "major error (false resistance)"
-  ))
+kleb <- kleb_table |>
+  select(sample, matches("_acquired$|_mutations$")) |>  # acquired genes and resistance mutations
+  rename_with(\(x) sub(".*__", "", x), -sample) |>      # klebsiella_pneumo_complex__amr__AGly_acquired -> AGly_acquired
+  pivot_longer(-sample, names_to = "column", values_to = "gene") |>
+  separate_longer_delim(gene, ";") |>
+  filter(!is.na(gene), gene != "-")
 
-cmp |> count(drug, result) |> pivot_wider(names_from = result, values_from = n, values_fill = 0)
+kleb_rules <- tribble(
+  ~drug,           ~ast_column,                    ~column,                  ~pattern,
+  "Gentamicin",    "Gentamicin 10",                "AGly_acquired",          "^(aac\\(3\\)|ant\\(2''\\)|armA|rmt|npmA)",
+  "Ceftriaxone",   "Cefpodoxime 10 (Ceftriaxone)", "Bla_ESBL_acquired",      ".",
+  "Ceftriaxone",   "Cefpodoxime 10 (Ceftriaxone)", "Bla_ESBL_inhR_acquired", ".",
+  "Ceftriaxone",   "Cefpodoxime 10 (Ceftriaxone)", "Bla_Carb_acquired",      ".",
+  "Ceftriaxone",   "Cefpodoxime 10 (Ceftriaxone)", "Bla_acquired",           "^(CMY|DHA|ACC|FOX|MOX)",   # plasmid AmpC
+  "Meropenem",     "Meropenem 10",                 "Bla_Carb_acquired",      ".",
+  "Amikacin",      "Amikacin 30",                  "AGly_acquired",          "^(aac\\(6'\\)-Ib|aph\\(3'\\)-VI|armA|rmt|npmA)",
+  "Ciprofloxacin", "Ciprofloxacin 5",              "Flq_acquired",           ".",
+  "Ciprofloxacin", "Ciprofloxacin 5",              "Flq_mutations",          "."
+)
+
+pred_kleb <- kleb_rules |>
+  crossing(sample = kleb_table$sample) |>              # only isolates Kleborate typed (KpSC)
+  left_join(kleb, by = c("sample", "column"), relationship = "many-to-many") |>
+  group_by(drug, ast_column, sample) |>
+  summarise(
+    hit      = any(str_detect(gene, pattern), na.rm = TRUE),
+    genes    = paste(unique(gene[which(str_detect(gene, pattern))]), collapse = ";"),
+    .groups  = "drop"
+  ) |>
+  mutate(genotype = if_else(hit, "R", "S"))
+
+# ---- Both tools against the AST
+cmp <- bind_rows(AMRFinderPlus = compare_ast(pred), Kleborate = compare_ast(pred_kleb), .id = "tool")
+
+cmp |>
+  count(drug, tool, result) |>
+  pivot_wider(names_from = result, values_from = n, values_fill = 0) |>
+  arrange(drug, tool)
 write_tsv(cmp, "results/04_amr/genotype_vs_phenotype.tsv")
 ```
+
+The table has one row per drug and tool. Read the two rows of each drug together: where they differ, the tools
+found different genes, or one reports a gene the other files under a different drug class.
+
+> [!NOTE]
+> Kleborate types only the *Klebsiella pneumoniae* species complex, so E. coli isolates (none in the training
+> set, but common in your own data) get AMRFinderPlus predictions only. Kleborate's `Bla_chr` column (the intrinsic
+> SHV, LEN or OKP of each species) is left out on purpose, as are the `truncated_resistance_hits` and
+> `spurious_resistance_hits` columns: Kleborate puts partial or low-identity hits there instead of counting them.
 
 > [!NOTE]
 > **Very major error**: the genome says susceptible but the isolate is resistant. This is the dangerous one,
@@ -94,7 +156,13 @@ write_tsv(cmp, "results/04_amr/genotype_vs_phenotype.tsv")
 Pick two disagreements and investigate them:
 
 ```r
-cmp |> filter(result != "agree") |> select(sample, drug, genes, genotype, phenotype)
+cmp |> filter(result != "agree") |> select(tool, sample, drug, genes, genotype, phenotype) |> arrange(drug, sample)
+
+# Isolates where the two tools disagree with each other
+inner_join(pred      |> select(sample, drug, AMRFinderPlus = genotype, amrfinder_genes = genes),
+           pred_kleb |> select(sample, drug, Kleborate = genotype, kleborate_genes = genes),
+           by = c("sample", "drug")) |>
+  filter(AMRFinderPlus != Kleborate)
 ```
 
 Possible explanations to consider:
@@ -103,7 +171,7 @@ Possible explanations to consider:
 - Resistance from **porin loss** or **efflux**, which gene screening misses.
 - A **truncated** or partial gene.
 - An AST error: wrong breakpoints, wrong disc, mixed culture.
-- A **database** or tool version difference.
+- A **database** or tool version difference: compare the two tools' rows for the same isolate and drug.
 
 <details>
 <summary><b>Hint: amikacin</b></summary>
