@@ -24,8 +24,15 @@ Faster than one 'gcloud storage cp' per file:
 
 Output names match bin/make_assembly_samplesheet.py: assemblies/<sample>_contigs.fasta (gzipped assemblies are
 decompressed, as the pipeline needs plain FASTA). With --by-country, files go to <outdir>/<Country>/<type>/.
-A log of every file (sample, country, type, source, destination, status) is written to
-<outdir>/terra_downloads.tsv.
+
+Country folders are named after the country alone: ontology IDs in the country column ('Ethiopia
+GAZ_00000567', 'Kenya [GAZ:00001101]') are dropped, so the folder is 'Ethiopia', not 'Ethiopia_GAZ_00000567_'.
+A value that is nothing but an ID has no name to keep, so it is used as it is and reported at the end;
+give those a name with --country-map (a TSV of 'raw<TAB>country'), or keep the IDs with --keep-country-ids.
+
+One log per country is written as <folder>/terra_downloads_<Country>.tsv (in that country's folder with
+--by-country, otherwise in --outdir), with the columns sample, country, country_raw, type, source,
+destination and status. --log-prefix renames the file.
 """
 
 import argparse
@@ -49,13 +56,56 @@ KINDS = {
     "ts_mlst_results": ("ts-mlst", "_ts_mlst.tsv"),
 }
 SAFE_ID = re.compile(r"^[A-Za-z0-9_.-]+$")
+# Ontology accessions that turn up in Terra metadata columns, e.g. GAZ_00001093, GAZ:00000567
+# '_' is a word character, so \b would miss 'Ethiopia_GAZ_00000567': match on non-alphanumeric instead
+ONTOLOGY_ID = re.compile(r"(?<![A-Za-z0-9])(?:GAZ|NCBITaxon|UBERON|OBI|DOID|MONDO|PATO|EFO|BTO|ENVO)"
+                         r"[:_]\d+(?![A-Za-z0-9])", re.IGNORECASE)
 
 
 def log(msg):
     print(f"[{time.strftime('%H:%M:%S')}] {msg}", flush=True)
 
 
-def read_table(path, kinds, country_col, countries, samples, by_country):
+def clean_country(value, mapping=None, keep_ids=False):
+    """Country name with ontology IDs removed: 'Ethiopia GAZ_00000567' -> 'Ethiopia'.
+
+    A value that is only an ID ('GAZ_00001093') has no name to keep, so it is returned unchanged rather
+    than dropped: nothing is silently lost, and main() reports those values. --country-map names them.
+    """
+    raw = (value or "").strip()
+    if mapping and raw in mapping:
+        return mapping[raw]
+    if keep_ids:
+        return raw
+    text = ONTOLOGY_ID.sub(" ", raw)
+    text = re.sub(r"[\[\](){}<>,;:|/]+", " ", text)      # brackets or separators the ID sat in
+    text = re.sub(r"\s+", " ", text).strip(" _-.")
+    return text or raw
+
+
+def country_dir_name(country):
+    """Folder name for a country: letters, digits, _ . - only, no leading or trailing punctuation."""
+    return re.sub(r"[^A-Za-z0-9_.-]+", "_", country).strip("_.-") or "unknown"
+
+
+def read_country_map(path):
+    """TSV (or CSV) of 'raw value<TAB>country name'; lines starting with '#' are comments."""
+    mapping = {}
+    with open(path, newline="") as handle:
+        for line in handle:
+            line = line.rstrip("\n")
+            if not line.strip() or line.lstrip().startswith("#"):
+                continue
+            parts = line.split("\t") if "\t" in line else line.split(",")
+            if len(parts) < 2:
+                sys.exit(f"{path}: need two columns 'raw<TAB>country', got {line!r}")
+            mapping[parts[0].strip()] = parts[1].strip()
+    if not mapping:
+        sys.exit(f"{path} has no rows")
+    return mapping
+
+
+def read_table(path, kinds, country_col, countries, samples, by_country, cmap=None, keep_ids=False):
     """Rows to download: dicts with sample, country, kind, src. Also counts of what was skipped."""
     with open(path, newline="") as handle:
         reader = csv.reader(handle, delimiter="\t")
@@ -72,8 +122,11 @@ def read_table(path, kinds, country_col, countries, samples, by_country):
             if not row or not row[0].strip():
                 continue
             sample = row[0].strip()
-            country = (row[c_idx].strip() if c_idx is not None and c_idx < len(row) else "") or "unknown"
-            if countries and country.lower() not in countries:
+            raw = (row[c_idx].strip() if c_idx is not None and c_idx < len(row) else "")
+            country = clean_country(raw, cmap, keep_ids) or "unknown"
+            # --countries matches the cleaned name or the raw value, so 'Ethiopia' also selects
+            # rows whose country column reads 'Ethiopia GAZ_00000567'
+            if countries and country.lower() not in countries and raw.lower() not in countries:
                 continue
             if samples and sample not in samples:
                 continue
@@ -88,13 +141,14 @@ def read_table(path, kinds, country_col, countries, samples, by_country):
                 if not src.startswith("gs://"):
                     empty[kind] += 1
                     continue
-                jobs.append({"sample": sample, "country": country, "kind": kind, "src": src})
+                jobs.append({"sample": sample, "country": country, "country_raw": raw or "unknown",
+                             "kind": kind, "src": src})
     return jobs, empty, bad_ids
 
 
 def destination(job, outdir, by_country):
     folder, suffix = KINDS[job["kind"]]
-    country_dir = re.sub(r"[^A-Za-z0-9_.-]+", "_", job["country"]) if by_country else ""
+    country_dir = country_dir_name(job["country"]) if by_country else ""
     return os.path.join(outdir, country_dir, folder, job["sample"] + suffix)
 
 
@@ -192,7 +246,14 @@ def main():
                     help="parallel downloads in the one-file-at-a-time fallback [$SLURM_CPUS_PER_TASK or 8]")
     ap.add_argument("--by-country", action="store_true", help="put files in <outdir>/<Country>/<type>/")
     ap.add_argument("--country-col", default="Country", help="country column [Country]")
-    ap.add_argument("--countries", nargs="+", help="only these countries (case-insensitive)")
+    ap.add_argument("--countries", nargs="+",
+                    help="only these countries (case-insensitive; matches the cleaned name or the raw value)")
+    ap.add_argument("--country-map", help="TSV 'raw value<TAB>country name', for country values that are "
+                                          "only an ontology ID (e.g. GAZ_00001093)")
+    ap.add_argument("--keep-country-ids", action="store_true",
+                    help="keep ontology IDs in country folder names (the old behaviour)")
+    ap.add_argument("--log-prefix", default="terra_downloads",
+                    help="stem of the per-country log file [terra_downloads]")
     ap.add_argument("--samples", help="only the sample IDs listed in this file (one per line)")
     ap.add_argument("--billing-project", help="Google Cloud project to bill (requester-pays buckets)")
     ap.add_argument("--retries", type=int, default=2, help="retries per file in the fallback [2]")
@@ -209,10 +270,18 @@ def main():
         with open(args.samples) as fh:
             samples = {line.strip() for line in fh if line.strip()}
     countries = {c.lower() for c in args.countries} if args.countries else None
+    cmap = read_country_map(args.country_map) if args.country_map else None
 
-    jobs, empty, bad_ids = read_table(args.terra_output, args.files, args.country_col, countries, samples, args.by_country)
+    jobs, empty, bad_ids = read_table(args.terra_output, args.files, args.country_col, countries, samples,
+                                      args.by_country, cmap, args.keep_country_ids)
     for kind, n in empty.items():
         log(f"{kind}: {n} sample(s) have no file in the table (skipped)")
+    # country values that are only an ontology ID: no name to use, so they keep the ID
+    id_only = sorted({j["country"] for j in jobs if ONTOLOGY_ID.fullmatch(j["country"].strip())})
+    if id_only:
+        log(f"WARNING: {len(id_only)} country value(s) are only an ontology ID, so the folder keeps the ID: "
+            f"{', '.join(id_only[:5])}{' ...' if len(id_only) > 5 else ''}. "
+            f"Give them names with --country-map.")
     if bad_ids:
         log(f"WARNING: {len(bad_ids)} sample ID(s) contain characters the pipeline rejects "
             f"(allowed: letters, digits, _ . -), e.g. {sorted(bad_ids)[0]!r}")
@@ -260,16 +329,28 @@ def main():
                 if not job["status"].startswith("downloaded") or i % 50 == 0 or i == len(single):
                     log(f"  {i}/{len(single)} {job['sample']} {job['kind']}: {job['status']}")
 
-    report = os.path.join(outdir, "terra_downloads.tsv")
-    os.makedirs(outdir, exist_ok=True)
-    with open(report, "w", newline="") as fh:
-        w = csv.writer(fh, delimiter="\t")
-        w.writerow(["sample", "country", "type", "source", "destination", "status"])
-        for job in jobs:
-            w.writerow([job["sample"], job["country"], job["kind"], job["src"], job["dest"], job.get("status", "")])
+    # One log per country, beside that country's files (with --by-country) or in --outdir.
+    # A table with no country column puts everything in one '<prefix>.tsv'.
+    per_country = defaultdict(list)
+    for job in jobs:
+        per_country[job["country"]].append(job)
+    reports = []
+    for country, country_jobs in sorted(per_country.items()):
+        cdir = country_dir_name(country)
+        folder = os.path.join(outdir, cdir) if args.by_country else outdir
+        stem = args.log_prefix if country == "unknown" else f"{args.log_prefix}_{cdir}"
+        report = os.path.join(folder, stem + ".tsv")
+        os.makedirs(folder, exist_ok=True)
+        with open(report, "w", newline="") as fh:
+            w = csv.writer(fh, delimiter="\t")
+            w.writerow(["sample", "country", "country_raw", "type", "source", "destination", "status"])
+            for job in country_jobs:
+                w.writerow([job["sample"], job["country"], job["country_raw"], job["kind"],
+                            job["src"], job["dest"], job.get("status", "")])
+        reports.append(report)
     totals = Counter(j.get("status", "").split(":")[0] for j in jobs)
     log(f"Done in {time.time() - start:.0f} s: " + ", ".join(f"{v} {k}" for k, v in totals.items()) +
-        f". Log: {report}")
+        f". Log(s): {', '.join(reports)}")
     if totals.get("failed"):
         sys.exit(1)
 

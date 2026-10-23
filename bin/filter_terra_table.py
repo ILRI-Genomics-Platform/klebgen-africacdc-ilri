@@ -34,6 +34,20 @@ UNIT_DAYS = {"h": 1 / 24, "hr": 1 / 24, "hrs": 1 / 24, "hour": 1 / 24, "hours": 
              "d": 1, "day": 1, "days": 1, "w": 7, "wk": 7, "wks": 7, "week": 7, "weeks": 7,
              "m": 30, "mo": 30, "mon": 30, "month": 30, "months": 30,
              "y": 365.25, "yr": 365.25, "yrs": 365.25, "year": 365.25, "years": 365.25}
+# Ontology accessions that turn up in Terra country columns (same rules as download_terra_outputs.py)
+ONTOLOGY_ID = re.compile(r"(?<![A-Za-z0-9])(?:GAZ|NCBITaxon|UBERON|OBI|DOID|MONDO|PATO|EFO|BTO|ENVO)"
+                         r"[:_]\d+(?![A-Za-z0-9])", re.IGNORECASE)
+
+
+def clean_country(value):
+    """'Ethiopia GAZ_00000567' -> 'Ethiopia'; a value that is only an ID is returned unchanged."""
+    raw = (value or "").strip()
+    text = ONTOLOGY_ID.sub(" ", raw)
+    text = re.sub(r"[\[\](){}<>,;:|/]+", " ", text)
+    text = re.sub(r"\s+", " ", text).strip(" _-.")
+    return text or raw
+
+
 def species_code(value):
     """kpneumoniae, ecoli, or None for other organisms (same rules as make_assembly_samplesheet.py)."""
     s = re.sub(r"[^a-z]", "", (value or "").lower())
@@ -69,6 +83,10 @@ def main():
                     help="organism column [Organism_detected_phenotypically]")
     ap.add_argument("--organism", nargs="+",
                     help="organisms to keep: 'K. pneumoniae' and/or 'E. coli' (any spelling) [all]")
+    ap.add_argument("--country-col", default="Country", help="country column, with --countries [Country]")
+    ap.add_argument("--countries", nargs="+",
+                    help="keep only these countries; ontology IDs in the column are ignored, so "
+                         "'--countries Ethiopia' also matches 'Ethiopia GAZ_00000567'")
     ap.add_argument("--age-col", default="Age", help="age column [Age]")
     ap.add_argument("--max-age-days", type=float, default=30, help="keep ages <= this many days [30]")
     ap.add_argument("--unitless-unit", choices=["d", "w", "m", "y"],
@@ -84,17 +102,27 @@ def main():
     with open(args.terra_output, newline="") as fh:
         reader = csv.reader(fh, delimiter="\t")
         header = next(reader)
-        needed = [args.specimen_col, args.age_col] + ([args.organism_col] if organisms else [])
+        needed = [args.specimen_col, args.age_col] + ([args.organism_col] if organisms else []) \
+            + ([args.country_col] if args.countries else [])
         for col in needed:
             if col not in header:
                 sys.exit(f"No '{col}' column in {args.terra_output}. Columns: {', '.join(header)}")
         s_idx, a_idx = header.index(args.specimen_col), header.index(args.age_col)
         o_idx = header.index(args.organism_col) if organisms else None
+        c_idx = header.index(args.country_col) if args.countries else None
+        countries = {c.strip().lower() for c in args.countries} if args.countries else None
         kept, reasons, other_specimens, bad_ages, other_orgs = [], Counter(), Counter(), Counter(), Counter()
+        other_countries = Counter()
         for row in reader:
             if not row or not row[0].strip():
                 continue
             row += [""] * (len(header) - len(row))
+            if countries is not None:
+                raw = row[c_idx].strip()
+                if clean_country(raw).lower() not in countries and raw.lower() not in countries:
+                    reasons["other country"] += 1
+                    other_countries[raw or "(empty)"] += 1
+                    continue
             specimen = row[s_idx].strip().lower()
             ok = any(w in specimen for w in wanted) if args.specimen_contains else specimen in wanted
             if not ok:
@@ -124,6 +152,8 @@ def main():
     print(f"{len(kept)} of {total} rows kept -> {args.out}")
     for reason, n in reasons.most_common():
         print(f"  left out, {reason}: {n}")
+    if other_countries:
+        print("  other countries: " + ", ".join(f"{k} ({v})" for k, v in other_countries.most_common(15)))
     if other_specimens:
         print("  other specimen types: " + ", ".join(f"{k} ({v})" for k, v in other_specimens.most_common(15)))
     if other_orgs:
