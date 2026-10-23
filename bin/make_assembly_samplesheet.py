@@ -46,7 +46,7 @@ MONTHS = {m: i for i, m in enumerate(
 def species_code(value):
     """kpneumoniae / ecoli, or None for organisms the pipeline does not type."""
     s = re.sub(r"[^a-z]", "", (value or "").lower())
-    if s in ("kpneumoniae", "klebsiellapneumoniae", "kpn", "kp") or "pneumoniae" in s or "variicola" in s:
+    if s in ("kpneumoniae", "klebsiellapneumoniae") or " Klebsiella pneumoniae" in s:
         return "kpneumoniae"
     if s in ("ecoli", "escherichiacoli", "eco"):
         return "ecoli"
