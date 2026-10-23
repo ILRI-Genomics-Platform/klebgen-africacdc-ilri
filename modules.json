@@ -33,6 +33,13 @@
                             "modules"
                         ]
                     },
+                    "checkm2/predict": {
+                        "branch": "master",
+                        "git_sha": "f407d5c00e870aa43ee5662af40c15f07474061e",
+                        "installed_by": [
+                            "modules"
+                        ]
+                    },
                     "ectyper": {
                         "branch": "master",
                         "git_sha": "c8cb89b6a5514af8d813dcf26166628bf64799e3",

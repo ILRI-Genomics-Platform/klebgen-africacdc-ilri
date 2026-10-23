@@ -40,6 +40,21 @@ workflow PIPELINE_INITIALISATION {
             "groups of 3 or more also get a recombination-filtered tree")
     }
 
+    // CheckM2's DIAMOND database (optional): a file, uniref100.KO.1.dmnd
+    if (params.checkm2_db) {
+        def db = file(params.checkm2_db)
+        if (!db.exists()) {
+            error("--checkm2_db not found: ${params.checkm2_db}\n" +
+                "Give the DIAMOND database file itself, e.g. <shared>/databases/checkm2/CheckM2_database/uniref100.KO.1.dmnd\n" +
+                "Download it once with:  checkm2 database --download --path <folder>\n" +
+                "Omit --checkm2_db to skip the completeness and contamination check.")
+        }
+        if (db.isDirectory()) {
+            error("--checkm2_db is a folder: ${params.checkm2_db}\n" +
+                "Give the DIAMOND database file inside it, e.g. ${params.checkm2_db}/CheckM2_database/uniref100.KO.1.dmnd")
+        }
+    }
+
     if (params.run_bakta) {
         if (!params.bakta_db) {
             error("--run_bakta needs --bakta_db: a Bakta database folder (version 6). Download one with\n" +

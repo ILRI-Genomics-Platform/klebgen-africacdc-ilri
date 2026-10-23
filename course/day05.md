@@ -239,7 +239,7 @@ nextflow run $SHARED/neonatal-amr-nf/main.nf -profile singularity -c $SITE_CONFI
 | Folder | Contents | Day you did this by hand |
 | --- | --- | --- |
 | `01_qc/` | fastp, Filtlong, NanoPlot, Kraken2, Bracken | 1 |
-| `02_assembly/` | Shovill, Autocycler, hybrid, QUAST | 2 |
+| `02_assembly/` | Shovill, Autocycler, hybrid, QUAST, and CheckM2 completeness/contamination in `checkm2/quality_report.tsv` (with `--checkm2_db`) | 2 |
 | `03_typing/` | Kleborate (and *E. coli* typing) | 3 |
 | `04_amr/` | AMRFinderPlus | 3–4 |
 | `05_plasmids/` | MOB-suite | 4–5 |

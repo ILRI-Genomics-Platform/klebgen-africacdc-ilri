@@ -121,6 +121,14 @@ def helpMessage() {
                                omit to skip the contamination check    [${params.kraken2_db ?: 'not set'}]
       --amrfinderplus_db       AMRFinderPlus database (.tar.gz or folder);
                                omit to download the latest             [${params.amrfinderplus_db ?: 'not set'}]
+      --checkm2_db             CheckM2 DIAMOND database file (uniref100.KO.1.dmnd);
+                               omit to skip completeness / contamination
+                                                                       [${params.checkm2_db ?: 'not set'}]
+
+    Assembly quality:
+      --checkm2_max_contamination
+                               warn about assemblies above this % contamination
+                                                                       [${params.checkm2_max_contamination}]
 
     Phylogeny / transmission:
       --skip_phylogeny         Skip the phylogeny step                 [${params.skip_phylogeny}]

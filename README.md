@@ -95,6 +95,7 @@ neonatal-amr-nf/
 | Short-read polishing | `polypolish/shortread` | **local** | Polypolish 0.6.0, BWA 0.7.19 |
 | Short-read polishing | `pypolca/run` | nf-core | 0.4.0 |
 | Assembly QC | `quast` | nf-core | 5.3.0 |
+| Completeness / contamination | `checkm2/predict` | nf-core | 1.1.0 (needs `--checkm2_db`) |
 | Annotation (optional, `--run_prokka`) | `prokka` | nf-core | 1.15.6 |
 | Annotation (optional, `--run_bakta`) | `bakta/bakta` | nf-core | 1.12.0 (database version 6) |
 | Typing, AMR, virulence, K/O | `kleborate` | **local** | 3.2.4 |
@@ -159,6 +160,7 @@ EPHEC201,E. coli,/data/ethiopia/contigs/EPHEC201_contigs.fasta,
 | fastp, Filtlong, NanoPlot, Kraken2/Bracken | run | skipped (no reads) |
 | Shovill / hybrid assembly | run | skipped: the given contigs are used |
 | QUAST | run | run, on the given contigs |
+| CheckM2 (`--checkm2_db`) | run | run, on the given contigs — the only contamination check on this route, since Kraken2 needs reads |
 | Kleborate, Kaptive, AMRFinderPlus, MOB-suite, *E. coli* typing, Prokka | run | run |
 | Phylogeny | Snippy maps the reads | Snippy maps the contigs (`snippy --ctgs`, local module `snippy/contigs`) |
 
@@ -335,6 +337,8 @@ section 7.
 | `--outdir` | `results` | Output folder |
 | `--kraken2_db` | none | Kraken2 database folder (with Bracken files); omit to skip the contamination check |
 | `--amrfinderplus_db` | none | AMRFinderPlus database; omit to download the latest (its date is recorded) |
+| `--checkm2_db` | none | CheckM2 DIAMOND database file (`uniref100.KO.1.dmnd`); omit to skip completeness and contamination |
+| `--checkm2_max_contamination` | `5` | Warn about assemblies above this % contamination (CheckM2); nothing is dropped |
 | `--phylo_grouping` | `species` | `species` (all isolates of a Kleborate species, any ST), `kleborate` (species + ST from Kleborate) or `samplesheet` (`phylo_group` column) |
 | `--phylo_reference_sheet` | `conf/phylo_references.csv` | Reference genome per species / ST (species and kleborate modes) |
 | `--phylo_reference_dir` | `references/` (site configs: shared folder) | Folder with `<accession>.fasta`, filled by `bin/fetch_references.py` |
@@ -352,7 +356,7 @@ section 7.
 ```text
 results/
 ├── 01_qc/            fastp, filtlong, nanoplot, kraken2, bracken
-├── 02_assembly/      shovill, autocycler, hybrid, quast, prokka (--run_prokka), bakta (--run_bakta)
+├── 02_assembly/      shovill, autocycler, hybrid, quast, checkm2 (--checkm2_db), prokka (--run_prokka), bakta (--run_bakta)
 ├── 03_typing/        kleborate, kaptive (K and O reports, locus FASTA), ectyper, ezclermont
 ├── 04_amr/           amrfinderplus
 ├── 05_plasmids/      mobsuite
@@ -420,7 +424,8 @@ nextflow run main.nf -profile test,docker,wave -stub --outdir test_assemblies \
 
 ## Exercises built into the pipeline
 
-1. Add the nf-core `checkm2/predict` module after assembly and drop isolates above 5% contamination.
+1. Make the pipeline *drop* isolates above `--checkm2_max_contamination` instead of only warning about them
+   (CheckM2 already runs: see `subworkflows/local/assembly/main.nf`).
 2. Replace `autocycler/assemble` with the nf-core Autocycler sub-modules plus `flye` and `raven` modules.
 3. Add ABRicate (ResFinder, VFDB) and compare its calls with AMRFinderPlus.
 4. Write an R script that joins Kleborate, AMRFinderPlus, MOB-suite and metadata by sample ID (Module 8).
