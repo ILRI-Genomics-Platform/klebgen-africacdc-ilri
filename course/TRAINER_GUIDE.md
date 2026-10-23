@@ -188,7 +188,7 @@ already downloaded, so you can re-run it after an interruption.
 | --- | --- | --- | --- | --- | --- |
 | Kraken2 Standard-8, with Bracken files | 2026-06-26 (newest when written) | 5.5 GB | 7.5 GB; needs ~8 GB RAM | Day 1; pipeline (Days 5, 10) | `databases/kraken2/` |
 | AMRFinderPlus | newest at download | small | small | Days 3–5; pipeline | `databases/amrfinderplus/latest/` and `amrfinderdb.tar.gz` |
-| CheckM2 (DIAMOND) | database v2, for CheckM2 1.0.2 | 1.7 GB | a few GB | Day 2 | `databases/checkm2/CheckM2_database/uniref100.KO.1.dmnd` |
+| CheckM2 (DIAMOND) | database v2, for CheckM2 1.0.2 | 1.7 GB | a few GB | Day 2; pipeline `--checkm2_db` | `databases/checkm2/CheckM2_database/uniref100.KO.1.dmnd` |
 | Bakta light | database v6, for Bakta 1.12 | 1.3 GB | 3.9 GB | Day 5; pipeline `--run_bakta` | `databases/bakta/db-light/` |
 
 In all, about **9 GB to download and 15 GB on disk**. Two other databases need nothing from you:

@@ -26,6 +26,8 @@
 #     sbatch --export=ALL,COUNTRY=Kenya,SPECIES=ecoli submit_assemblies.sh
 #     sbatch --export=ALL,COUNTRY=Malawi,MAX_AGE_DAYS=30 submit_assemblies.sh
 #     sbatch --export=ALL,COUNTRY=Zimbabwe,TERRA_TSV=/path/to/Zimbabwe_sample.tsv submit_assemblies.sh
+#     sbatch --export=ALL,COUNTRY=Ethiopia,RUN_BAKTA= submit_assemblies.sh      # skip Bakta annotation
+#     sbatch --export=ALL,COUNTRY=Ethiopia,CHECKM2_DB= submit_assemblies.sh     # skip CheckM2
 #     COUNTRY=Ethiopia STEPS=samplesheet bash submit_assemblies.sh        # rebuild one samplesheet only
 #
 # Folder layout under DATA_DIR (set DATA_DIR=$SHARED/countries to share it with the participants):
@@ -111,6 +113,13 @@ PHYLO_METHOD="${PHYLO_METHOD:-ska2}"                              # --phylo_meth
 # Isolates without an ST from Kleborate are left out in species and kleborate modes.
 PHYLO_GROUPING="${PHYLO_GROUPING:-species}"
 AMRFINDER_DB="${AMRFINDER_DB:-${SHARED}/databases/amrfinderplus/amrfinderdb.tar.gz}"   # course/TRAINER_GUIDE.md, 5.1
+# CheckM2 completeness and contamination. On the assembly route this is the only contamination check,
+# because Kraken2 needs reads. Set CHECKM2_DB= (empty) to skip it.
+CHECKM2_DB="${CHECKM2_DB-${SHARED}/databases/checkm2/CheckM2_database/uniref100.KO.1.dmnd}"
+# Bakta annotation (Module 5). --run_bakta on its own is rejected by the pipeline, so the database
+# goes with it. Set RUN_BAKTA= (empty) to skip annotation; it is the slowest optional step.
+RUN_BAKTA="${RUN_BAKTA-yes}"
+BAKTA_DB="${BAKTA_DB:-${SHARED}/databases/bakta/db-light}"
 
 # Nextflow keeps its run history (needed by -resume) in the folder it starts from.
 # A fixed launch folder per run name means a resubmission always resumes the same run.
@@ -194,116 +203,124 @@ if want samplesheet; then
         --metadata-out "${METADATA_OUT}"
 fi
 
-# if ! want run; then
-#     echo; echo "================================================="
-#     echo " Preparation done. Submit the pipeline with:"
-#     echo "   sbatch --export=ALL,COUNTRY=${COUNTRY},SPECIES=${SPECIES},STEPS=run submit_assemblies.sh"
-#     echo "================================================="
-#     exit 0
-# fi
+if ! want run; then
+    echo; echo "================================================="
+    echo " Preparation done. Submit the pipeline with:"
+    echo "   sbatch --export=ALL,COUNTRY=${COUNTRY},SPECIES=${SPECIES},STEPS=run submit_assemblies.sh"
+    echo "================================================="
+    exit 0
+fi
 
-# #-------------------------------------------------------------------------------
-# # Checks before anything is submitted (before loading modules, so a mistake is reported at once)
-# #-------------------------------------------------------------------------------
-# [[ -f "${PIPELINE_DIR}/conf/slurm.config" ]] || fail "conf/slurm.config not found in ${PIPELINE_DIR}"
-# [[ -f "${INPUT}" ]]                          || fail "samplesheet not found: ${INPUT} (run the 'samplesheet' step first)"
-# [[ "${PHYLO_GROUPING}" =~ ^(species|kleborate|samplesheet)$ ]] \
-#     || fail "PHYLO_GROUPING must be species, kleborate or samplesheet (got '${PHYLO_GROUPING}')"
-# grep -q "'species'" "${PIPELINE_DIR}/subworkflows/local/utils_neonatal_amr_pipeline/main.nf" \
-#     || [[ "${PHYLO_GROUPING}" != species ]] \
-#     || fail "this copy of the pipeline predates --phylo_grouping species: update ${PIPELINE_DIR}"
-# [[ -e "${AMRFINDER_DB}" ]] || fail "AMRFinderPlus database not found: ${AMRFINDER_DB} (course/TRAINER_GUIDE.md, section 5.1)"
-# head -n 1 "${INPUT}" | grep -q 'fasta' \
-#     || fail "${INPUT} has no fasta column: it is not an assembly samplesheet (for reads use submit_neonatal_amr_reads.sbatch)"
+#-------------------------------------------------------------------------------
+# Checks before anything is submitted (before loading modules, so a mistake is reported at once)
+#-------------------------------------------------------------------------------
+[[ -f "${PIPELINE_DIR}/conf/slurm.config" ]] || fail "conf/slurm.config not found in ${PIPELINE_DIR}"
+[[ -f "${INPUT}" ]]                          || fail "samplesheet not found: ${INPUT} (run the 'samplesheet' step first)"
+[[ "${PHYLO_GROUPING}" =~ ^(species|kleborate|samplesheet)$ ]] \
+    || fail "PHYLO_GROUPING must be species, kleborate or samplesheet (got '${PHYLO_GROUPING}')"
+grep -q "'species'" "${PIPELINE_DIR}/subworkflows/local/utils_neonatal_amr_pipeline/main.nf" \
+    || [[ "${PHYLO_GROUPING}" != species ]] \
+    || fail "this copy of the pipeline predates --phylo_grouping species: update ${PIPELINE_DIR}"
+[[ -e "${AMRFINDER_DB}" ]] || fail "AMRFinderPlus database not found: ${AMRFINDER_DB} (course/TRAINER_GUIDE.md, section 5.1)"
+[[ -z "${CHECKM2_DB}" || -f "${CHECKM2_DB}" ]] \
+    || fail "CheckM2 database file not found: ${CHECKM2_DB} (course/TRAINER_GUIDE.md, section 5.1; CHECKM2_DB= to skip)"
+[[ -z "${RUN_BAKTA}" || -d "${BAKTA_DB}" ]] \
+    || fail "Bakta database folder not found: ${BAKTA_DB} (course/TRAINER_GUIDE.md, section 5.1; RUN_BAKTA= to skip annotation)"
+head -n 1 "${INPUT}" | grep -q 'fasta' \
+    || fail "${INPUT} has no fasta column: it is not an assembly samplesheet (for reads use submit_neonatal_amr_reads.sbatch)"
 
-# # Every contigs file in the samplesheet must exist and be readable from the compute nodes
-# INPUT_DIR=$(cd "$(dirname "${INPUT}")" && pwd)
-# missing=0
-# while IFS= read -r f; do
-#     [[ -z "$f" ]] && continue
-#     [[ "$f" = /* ]] || f="${INPUT_DIR}/${f}"
-#     [[ -r "$f" ]] || { echo "[ERROR] contigs file missing or unreadable: $f" >&2; missing=$((missing + 1)); }
-# done < <(awk -F',' 'NR==1 { for (i = 1; i <= NF; i++) col[$i] = i; next } { print $col["fasta"] }' "${INPUT}")
-# (( missing == 0 )) || fail "${missing} contigs file(s) missing"
+# Every contigs file in the samplesheet must exist and be readable from the compute nodes
+INPUT_DIR=$(cd "$(dirname "${INPUT}")" && pwd)
+missing=0
+while IFS= read -r f; do
+    [[ -z "$f" ]] && continue
+    [[ "$f" = /* ]] || f="${INPUT_DIR}/${f}"
+    [[ -r "$f" ]] || { echo "[ERROR] contigs file missing or unreadable: $f" >&2; missing=$((missing + 1)); }
+done < <(awk -F',' 'NR==1 { for (i = 1; i <= NF; i++) col[$i] = i; next } { print $col["fasta"] }' "${INPUT}")
+(( missing == 0 )) || fail "${missing} contigs file(s) missing"
 
-# INPUT="${INPUT_DIR}/$(basename "${INPUT}")"
+INPUT="${INPUT_DIR}/$(basename "${INPUT}")"
 
-# #-------------------------------------------------------------------------------
-# # Environment for the pipeline
-# #-------------------------------------------------------------------------------
-# set +u                                        # module scripts can use unset variables
-# module load nextflow/25.04
-# set -u
+#-------------------------------------------------------------------------------
+# Environment for the pipeline
+#-------------------------------------------------------------------------------
+set +u                                        # module scripts can use unset variables
+module load nextflow/25.04
+set -u
 
-# export NXF_OPTS="-Xms512M -Xmx4G"
-# export NXF_ANSI_LOG=false                     # plain progress lines in the log file
-# # Singularity's own temporary files on scratch, not in your home quota.
-# # (The pipeline's images come from the shared read-only folder; nothing is downloaded.)
-# export SINGULARITY_CACHEDIR="${BASE_DIR}/.singularity_cache"
-# export APPTAINER_CACHEDIR="${SINGULARITY_CACHEDIR}"
-# export SINGULARITY_TMPDIR="${BASE_DIR}/.singularity_tmp"
-# export APPTAINER_TMPDIR="${SINGULARITY_TMPDIR}"
+export NXF_OPTS="-Xms512M -Xmx4G"
+export NXF_ANSI_LOG=false                     # plain progress lines in the log file
+# Singularity's own temporary files on scratch, not in your home quota.
+# (The pipeline's images come from the shared read-only folder; nothing is downloaded.)
+export SINGULARITY_CACHEDIR="${BASE_DIR}/.singularity_cache"
+export APPTAINER_CACHEDIR="${SINGULARITY_CACHEDIR}"
+export SINGULARITY_TMPDIR="${BASE_DIR}/.singularity_tmp"
+export APPTAINER_TMPDIR="${SINGULARITY_TMPDIR}"
 
-# mkdir -p "${LAUNCH_DIR}" "${OUTDIR}" "${WORKDIR}" "${SINGULARITY_CACHEDIR}" "${SINGULARITY_TMPDIR}"
+mkdir -p "${LAUNCH_DIR}" "${OUTDIR}" "${WORKDIR}" "${SINGULARITY_CACHEDIR}" "${SINGULARITY_TMPDIR}"
 
-# step "Pipeline"
-# echo " Input      : assemblies (${SPECIES})"
-# echo " Samplesheet: ${INPUT} ($(($(wc -l < "${INPUT}") - 1)) samples)"
-# echo " Outdir     : ${OUTDIR}"
-# echo " Work dir   : ${WORKDIR}"
-# echo " Launch dir : ${LAUNCH_DIR}"
-# echo " AMRFinder  : ${AMRFINDER_DB}"
-# echo " Phylogeny  : ${PHYLO_METHOD}, groups: ${PHYLO_GROUPING} (min ${MIN_GROUP} isolates)"
-# echo "================================================="
+step "Pipeline"
+echo " Input      : assemblies (${SPECIES})"
+echo " Samplesheet: ${INPUT} ($(($(wc -l < "${INPUT}") - 1)) samples)"
+echo " Outdir     : ${OUTDIR}"
+echo " Work dir   : ${WORKDIR}"
+echo " Launch dir : ${LAUNCH_DIR}"
+echo " AMRFinder  : ${AMRFINDER_DB}"
+echo " CheckM2    : ${CHECKM2_DB:-skipped}"
+echo " Bakta      : $([[ -n "${RUN_BAKTA}" ]] && echo "${BAKTA_DB}" || echo skipped)"
+echo " Phylogeny  : ${PHYLO_METHOD}, groups: ${PHYLO_GROUPING} (min ${MIN_GROUP} isolates)"
+echo "================================================="
 
-# #-------------------------------------------------------------------------------
-# # Run
-# #-------------------------------------------------------------------------------
-# cd "${LAUNCH_DIR}"
+#-------------------------------------------------------------------------------
+# Run
+#-------------------------------------------------------------------------------
+cd "${LAUNCH_DIR}"
 
-# status=0
-# nextflow run "${PIPELINE_DIR}/main.nf" \
-#     -profile singularity \
-#     -c "${PIPELINE_DIR}/conf/slurm.config" \
-#     --input "${INPUT}" \
-#     --input_type assembly \
-#     --outdir "${OUTDIR}" \
-#     -work-dir "${WORKDIR}" \
-#     --amrfinderplus_db "${AMRFINDER_DB}" \
-#     --phylo_min_group_size "${MIN_GROUP}" \
-#     --phylo_grouping "${PHYLO_GROUPING}" \
-#     --phylo_method "${PHYLO_METHOD}" \
-#     -resume \
-#     || status=$?
+status=0
+nextflow run "${PIPELINE_DIR}/main.nf" \
+    -profile singularity \
+    -c "${PIPELINE_DIR}/conf/slurm.config" \
+    --input "${INPUT}" \
+    --input_type assembly \
+    --outdir "${OUTDIR}" \
+    -work-dir "${WORKDIR}" \
+    --amrfinderplus_db "${AMRFINDER_DB}" \
+    ${CHECKM2_DB:+--checkm2_db "${CHECKM2_DB}"} \
+    ${RUN_BAKTA:+--run_bakta --bakta_db "${BAKTA_DB}"} \
+    --phylo_min_group_size "${MIN_GROUP}" \
+    --phylo_grouping "${PHYLO_GROUPING}" \
+    --phylo_method "${PHYLO_METHOD}" \
+    -resume \
+    || status=$?
 
-# #-------------------------------------------------------------------------------
-# # Summary
-# #-------------------------------------------------------------------------------
-# echo "================================================="
-# echo " Nextflow exit status: ${status}"
-# echo " End Time            : $(date)"
-# echo " Nextflow log        : ${LAUNCH_DIR}/.nextflow.log"
+#-------------------------------------------------------------------------------
+# Summary
+#-------------------------------------------------------------------------------
+echo "================================================="
+echo " Nextflow exit status: ${status}"
+echo " End Time            : $(date)"
+echo " Nextflow log        : ${LAUNCH_DIR}/.nextflow.log"
 
-# trace=$(ls -t "${OUTDIR}"/pipeline_info/execution_trace_*.txt 2>/dev/null | head -n 1 || true)
-# if [[ -n "${trace}" ]]; then
-#     echo " Trace               : ${trace}"
-#     echo "-------------------------------------------------"
-#     echo " Tasks by status:"
-#     awk -F'\t' 'NR==1 { for (i = 1; i <= NF; i++) if ($i == "status") s = i; next } { n[$s]++ }
-#                 END { for (k in n) printf "   %-10s %d\n", k, n[k] }' "${trace}"
-#     failed=$(awk -F'\t' -v wd="${WORKDIR}" 'NR==1 { for (i = 1; i <= NF; i++) { if ($i == "status") s = i; if ($i == "name") m = i; if ($i == "hash") h = i }; next }
-#                          $s == "FAILED" { print "   " $m "  ->  " wd "/" $h "*" }' "${trace}")
-#     if [[ -n "${failed}" ]]; then
-#         echo " Failed tasks (see .command.err in each work folder):"
-#         echo "${failed}"
-#     fi
-# fi
-# echo "================================================="
+trace=$(ls -t "${OUTDIR}"/pipeline_info/execution_trace_*.txt 2>/dev/null | head -n 1 || true)
+if [[ -n "${trace}" ]]; then
+    echo " Trace               : ${trace}"
+    echo "-------------------------------------------------"
+    echo " Tasks by status:"
+    awk -F'\t' 'NR==1 { for (i = 1; i <= NF; i++) if ($i == "status") s = i; next } { n[$s]++ }
+                END { for (k in n) printf "   %-10s %d\n", k, n[k] }' "${trace}"
+    failed=$(awk -F'\t' -v wd="${WORKDIR}" 'NR==1 { for (i = 1; i <= NF; i++) { if ($i == "status") s = i; if ($i == "name") m = i; if ($i == "hash") h = i }; next }
+                         $s == "FAILED" { print "   " $m "  ->  " wd "/" $h "*" }' "${trace}")
+    if [[ -n "${failed}" ]]; then
+        echo " Failed tasks (see .command.err in each work folder):"
+        echo "${failed}"
+    fi
+fi
+echo "================================================="
 
-# exit "${status}"
+exit "${status}"
 
-# # After the run: figures and transmission pairs for this country and species. In bin/plot_results.sbatch set
-# #   RESULTS="/var/scratch/global/${USER}/neonatal-amr/outdir_<TAG>"      (TAG = <Country>_le<N>d_<species>)
-# #   METADATA="<COUNTRY_DIR>/<TAG>_metadata.tsv"
-# #   AST=""                                                               (no AST table)
-# # then:  bash bin/plot_results.sbatch
+# After the run: figures and transmission pairs for this country and species. In bin/plot_results.sbatch set
+#   RESULTS="/var/scratch/global/${USER}/neonatal-amr/outdir_<TAG>"      (TAG = <Country>_le<N>d_<species>)
+#   METADATA="<COUNTRY_DIR>/<TAG>_metadata.tsv"
+#   AST=""                                                               (no AST table)
+# then:  bash bin/plot_results.sbatch
