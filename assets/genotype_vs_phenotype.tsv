@@ -1,0 +1,201 @@
+tool	drug	ast_column	sample	hit	genes	genotype	phenotype	result
+AMRFinderPlus	Amikacin	Amikacin 30	BHB7VE	TRUE	aph(3')-VI;aac(6')-Ib	R	R	agree
+AMRFinderPlus	Amikacin	Amikacin 30	BKR8JH	TRUE	aac(6')-Ib	R	S	major error (false resistance)
+AMRFinderPlus	Amikacin	Amikacin 30	CAA47J	TRUE	aac(6')-Ib-cr5	R	S	major error (false resistance)
+AMRFinderPlus	Amikacin	Amikacin 30	CAA4GD	TRUE	aac(6')-Ib-cr5	R	S	major error (false resistance)
+AMRFinderPlus	Amikacin	Amikacin 30	CAA4X5	TRUE	aac(6')-Ib-cr5	R	S	major error (false resistance)
+AMRFinderPlus	Amikacin	Amikacin 30	CAA574	TRUE	aac(6')-Ib-cr5	R	S	major error (false resistance)
+AMRFinderPlus	Amikacin	Amikacin 30	CAA5XX	TRUE	aac(6')-Ib-cr5	R	S	major error (false resistance)
+AMRFinderPlus	Amikacin	Amikacin 30	CAA5YM	TRUE	aac(6')-Ib-cr5	R	S	major error (false resistance)
+AMRFinderPlus	Amikacin	Amikacin 30	CAA65Z	TRUE	aac(6')-Ib-cr5	R	S	major error (false resistance)
+AMRFinderPlus	Amikacin	Amikacin 30	CAA99X	TRUE	aac(6')-Ib-cr5	R	S	major error (false resistance)
+AMRFinderPlus	Amikacin	Amikacin 30	CAAG9G	FALSE		S	S	agree
+AMRFinderPlus	Amikacin	Amikacin 30	CAAGJF	FALSE		S	S	agree
+AMRFinderPlus	Amikacin	Amikacin 30	CAAGM3	FALSE		S	S	agree
+AMRFinderPlus	Amikacin	Amikacin 30	CAAGNM	FALSE		S	S	agree
+AMRFinderPlus	Amikacin	Amikacin 30	CAAHBT	FALSE		S	S	agree
+AMRFinderPlus	Amikacin	Amikacin 30	CAAQN6	TRUE	aac(6')-Ib	R	S	major error (false resistance)
+AMRFinderPlus	Amikacin	Amikacin 30	CAASX8	TRUE	aac(6')-Ib-cr5	R	S	major error (false resistance)
+AMRFinderPlus	Amikacin	Amikacin 30	CAAUM3	FALSE		S	S	agree
+AMRFinderPlus	Amikacin	Amikacin 30	CAAWBC	TRUE	aac(6')-Ib-cr5	R	S	major error (false resistance)
+AMRFinderPlus	Amikacin	Amikacin 30	CAAYXM	FALSE		S	S	agree
+AMRFinderPlus	Amikacin	Amikacin 30	CHI11E	FALSE		S	S	agree
+AMRFinderPlus	Amikacin	Amikacin 30	CLL32W	TRUE	aac(6')-Ib-cr5	R	S	major error (false resistance)
+AMRFinderPlus	Amikacin	Amikacin 30	CNS1F1	FALSE		S	S	agree
+AMRFinderPlus	Ceftriaxone	Cefpodoxime 10 (Ceftriaxone)	BHB7VE	TRUE	blaNDM-1;blaCTX-M-15	R	R	agree
+AMRFinderPlus	Ceftriaxone	Cefpodoxime 10 (Ceftriaxone)	BKR8JH	TRUE	blaCTX-M-15;blaOXA-1	R	R	agree
+AMRFinderPlus	Ceftriaxone	Cefpodoxime 10 (Ceftriaxone)	CAA47J	TRUE	blaCTX-M-15;blaOXA-1	R	R	agree
+AMRFinderPlus	Ceftriaxone	Cefpodoxime 10 (Ceftriaxone)	CAA4GD	TRUE	blaCTX-M-15;blaOXA-1	R	R	agree
+AMRFinderPlus	Ceftriaxone	Cefpodoxime 10 (Ceftriaxone)	CAA4X5	TRUE	blaCTX-M-15;blaOXA-1	R	R	agree
+AMRFinderPlus	Ceftriaxone	Cefpodoxime 10 (Ceftriaxone)	CAA574	TRUE	blaCTX-M-15;blaOXA-1	R	R	agree
+AMRFinderPlus	Ceftriaxone	Cefpodoxime 10 (Ceftriaxone)	CAA5XX	TRUE	blaCTX-M-15;blaOXA-1	R	R	agree
+AMRFinderPlus	Ceftriaxone	Cefpodoxime 10 (Ceftriaxone)	CAA5YM	TRUE	blaCTX-M-15;blaOXA-1	R	R	agree
+AMRFinderPlus	Ceftriaxone	Cefpodoxime 10 (Ceftriaxone)	CAA65Z	TRUE	blaCTX-M-15;blaOXA-1	R	R	agree
+AMRFinderPlus	Ceftriaxone	Cefpodoxime 10 (Ceftriaxone)	CAA99X	TRUE	blaCTX-M-15;blaOXA-1	R	R	agree
+AMRFinderPlus	Ceftriaxone	Cefpodoxime 10 (Ceftriaxone)	CAAG9G	TRUE	blaCTX-M-15	R	R	agree
+AMRFinderPlus	Ceftriaxone	Cefpodoxime 10 (Ceftriaxone)	CAAGJF	TRUE	blaCTX-M-15	R	R	agree
+AMRFinderPlus	Ceftriaxone	Cefpodoxime 10 (Ceftriaxone)	CAAGM3	TRUE	blaCTX-M-15	R	R	agree
+AMRFinderPlus	Ceftriaxone	Cefpodoxime 10 (Ceftriaxone)	CAAGNM	TRUE	blaCTX-M-15	R	R	agree
+AMRFinderPlus	Ceftriaxone	Cefpodoxime 10 (Ceftriaxone)	CAAHBT	TRUE	blaCTX-M-15	R	R	agree
+AMRFinderPlus	Ceftriaxone	Cefpodoxime 10 (Ceftriaxone)	CAAQN6	TRUE	blaSHV-12;blaCTX-M-15;blaOXA-10	R	R	agree
+AMRFinderPlus	Ceftriaxone	Cefpodoxime 10 (Ceftriaxone)	CAASX8	TRUE	blaCTX-M-15	R	R	agree
+AMRFinderPlus	Ceftriaxone	Cefpodoxime 10 (Ceftriaxone)	CAAUM3	FALSE		S	S	agree
+AMRFinderPlus	Ceftriaxone	Cefpodoxime 10 (Ceftriaxone)	CAAWBC	TRUE	blaCTX-M-15;blaOXA-1	R	R	agree
+AMRFinderPlus	Ceftriaxone	Cefpodoxime 10 (Ceftriaxone)	CAAYXM	FALSE		S	S	agree
+AMRFinderPlus	Ceftriaxone	Cefpodoxime 10 (Ceftriaxone)	CHI11E	TRUE	blaCTX-M-15	R	R	agree
+AMRFinderPlus	Ceftriaxone	Cefpodoxime 10 (Ceftriaxone)	CLL32W	TRUE	blaCTX-M-15;blaOXA-1	R	R	agree
+AMRFinderPlus	Ceftriaxone	Cefpodoxime 10 (Ceftriaxone)	CNS1F1	TRUE	blaCTX-M-15	R	R	agree
+AMRFinderPlus	Ciprofloxacin	Ciprofloxacin 5	BHB7VE	TRUE	oqxA;oqxB32;qnrS1	R	R	agree
+AMRFinderPlus	Ciprofloxacin	Ciprofloxacin 5	BKR8JH	TRUE	oqxB32;oqxA;qnrS1	R	R	agree
+AMRFinderPlus	Ciprofloxacin	Ciprofloxacin 5	CAA47J	TRUE	oqxB32;oqxA;aac(6')-Ib-cr5	R	S	major error (false resistance)
+AMRFinderPlus	Ciprofloxacin	Ciprofloxacin 5	CAA4GD	TRUE	oqxB32;oqxA;aac(6')-Ib-cr5	R	S	major error (false resistance)
+AMRFinderPlus	Ciprofloxacin	Ciprofloxacin 5	CAA4X5	TRUE	oqxA;oqxB32;aac(6')-Ib-cr5	R	S	major error (false resistance)
+AMRFinderPlus	Ciprofloxacin	Ciprofloxacin 5	CAA574	TRUE	oqxB32;oqxA;aac(6')-Ib-cr5	R	S	major error (false resistance)
+AMRFinderPlus	Ciprofloxacin	Ciprofloxacin 5	CAA5XX	TRUE	oqxA;oqxB32;aac(6')-Ib-cr5	R	S	major error (false resistance)
+AMRFinderPlus	Ciprofloxacin	Ciprofloxacin 5	CAA5YM	TRUE	oqxA;oqxB32;aac(6')-Ib-cr5	R	S	major error (false resistance)
+AMRFinderPlus	Ciprofloxacin	Ciprofloxacin 5	CAA65Z	TRUE	oqxA;oqxB32;aac(6')-Ib-cr5	R	S	major error (false resistance)
+AMRFinderPlus	Ciprofloxacin	Ciprofloxacin 5	CAA99X	TRUE	oqxA;oqxB32;aac(6')-Ib-cr5	R	S	major error (false resistance)
+AMRFinderPlus	Ciprofloxacin	Ciprofloxacin 5	CAAG9G	TRUE	oqxA3;oqxB19	R	S	major error (false resistance)
+AMRFinderPlus	Ciprofloxacin	Ciprofloxacin 5	CAAGJF	TRUE	oqxA3;oqxB19	R	S	major error (false resistance)
+AMRFinderPlus	Ciprofloxacin	Ciprofloxacin 5	CAAGM3	TRUE	oqxA3;oqxB19	R	S	major error (false resistance)
+AMRFinderPlus	Ciprofloxacin	Ciprofloxacin 5	CAAGNM	TRUE	oqxB19;oqxA3	R	S	major error (false resistance)
+AMRFinderPlus	Ciprofloxacin	Ciprofloxacin 5	CAAHBT	TRUE	oqxA3;oqxB19	R	S	major error (false resistance)
+AMRFinderPlus	Ciprofloxacin	Ciprofloxacin 5	CAAQN6	TRUE	qnrB1	R	S	major error (false resistance)
+AMRFinderPlus	Ciprofloxacin	Ciprofloxacin 5	CAASX8	TRUE	oqxA;oqxB25;aac(6')-Ib-cr5	R	R	agree
+AMRFinderPlus	Ciprofloxacin	Ciprofloxacin 5	CAAUM3	TRUE	oqxA;oqxB5	R	R	agree
+AMRFinderPlus	Ciprofloxacin	Ciprofloxacin 5	CAAWBC	TRUE	parC_S80I;gyrA_D87A;gyrA_S83F;oqxA;oqxB;qnrB2;aac(6')-Ib-cr5	R	R	agree
+AMRFinderPlus	Ciprofloxacin	Ciprofloxacin 5	CAAYXM	TRUE	oqxA;oqxB9;oqxR_D95E;oqxR_V113I	R	S	major error (false resistance)
+AMRFinderPlus	Ciprofloxacin	Ciprofloxacin 5	CHI11E	TRUE	oqxB32;oqxA	R	S	major error (false resistance)
+AMRFinderPlus	Ciprofloxacin	Ciprofloxacin 5	CLL32W	TRUE	gyrA_S83I;parC_S80I;oqxB19;oqxA;qnrB1;aac(6')-Ib-cr5	R	R	agree
+AMRFinderPlus	Ciprofloxacin	Ciprofloxacin 5	CNS1F1	TRUE	oqxA11;oqxB19	R	S	major error (false resistance)
+AMRFinderPlus	Gentamicin	Gentamicin 10	BHB7VE	TRUE	aac(3)-IId	R	R	agree
+AMRFinderPlus	Gentamicin	Gentamicin 10	BKR8JH	TRUE	aac(3)-IIe	R	R	agree
+AMRFinderPlus	Gentamicin	Gentamicin 10	CAA47J	TRUE	aac(3)-IIe	R	R	agree
+AMRFinderPlus	Gentamicin	Gentamicin 10	CAA4GD	TRUE	aac(3)-IIe	R	R	agree
+AMRFinderPlus	Gentamicin	Gentamicin 10	CAA4X5	TRUE	aac(3)-IIe	R	R	agree
+AMRFinderPlus	Gentamicin	Gentamicin 10	CAA574	TRUE	aac(3)-IIe	R	R	agree
+AMRFinderPlus	Gentamicin	Gentamicin 10	CAA5XX	TRUE	aac(3)-IIe	R	R	agree
+AMRFinderPlus	Gentamicin	Gentamicin 10	CAA5YM	TRUE	aac(3)-IIe	R	R	agree
+AMRFinderPlus	Gentamicin	Gentamicin 10	CAA65Z	TRUE	aac(3)-IIe	R	R	agree
+AMRFinderPlus	Gentamicin	Gentamicin 10	CAA99X	TRUE	aac(3)-IIe	R	R	agree
+AMRFinderPlus	Gentamicin	Gentamicin 10	CAAG9G	TRUE	aac(3)-IId	R	R	agree
+AMRFinderPlus	Gentamicin	Gentamicin 10	CAAGJF	TRUE	aac(3)-IId	R	R	agree
+AMRFinderPlus	Gentamicin	Gentamicin 10	CAAGM3	TRUE	aac(3)-IId	R	R	agree
+AMRFinderPlus	Gentamicin	Gentamicin 10	CAAGNM	TRUE	aac(3)-IId	R	R	agree
+AMRFinderPlus	Gentamicin	Gentamicin 10	CAAHBT	TRUE	aac(3)-IId	R	R	agree
+AMRFinderPlus	Gentamicin	Gentamicin 10	CAAQN6	TRUE	aac(3)-IId;aac(3)-IIe	R	R	agree
+AMRFinderPlus	Gentamicin	Gentamicin 10	CAASX8	TRUE	aac(3)-IIe	R	R	agree
+AMRFinderPlus	Gentamicin	Gentamicin 10	CAAUM3	FALSE		S	S	agree
+AMRFinderPlus	Gentamicin	Gentamicin 10	CAAWBC	TRUE	aac(3)-IIe	R	R	agree
+AMRFinderPlus	Gentamicin	Gentamicin 10	CAAYXM	FALSE		S	S	agree
+AMRFinderPlus	Gentamicin	Gentamicin 10	CHI11E	TRUE	aac(3)-IId	R	R	agree
+AMRFinderPlus	Gentamicin	Gentamicin 10	CLL32W	TRUE	aac(3)-IIe	R	R	agree
+AMRFinderPlus	Gentamicin	Gentamicin 10	CNS1F1	TRUE	aac(3)-IId	R	R	agree
+AMRFinderPlus	Meropenem	Meropenem 10	CAAQN6	FALSE		S	S	agree
+AMRFinderPlus	Meropenem	Meropenem 10	CAASX8	FALSE		S	S	agree
+AMRFinderPlus	Meropenem	Meropenem 10	CAAUM3	FALSE		S	S	agree
+AMRFinderPlus	Meropenem	Meropenem 10	CAAWBC	FALSE		S	S	agree
+AMRFinderPlus	Meropenem	Meropenem 10	CAAYXM	FALSE		S	S	agree
+AMRFinderPlus	Meropenem	Meropenem 10	CHI11E	FALSE		S	S	agree
+AMRFinderPlus	Meropenem	Meropenem 10	CLL32W	FALSE		S	S	agree
+AMRFinderPlus	Meropenem	Meropenem 10	CNS1F1	FALSE		S	S	agree
+Kleborate	Amikacin	Amikacin 30	BHB7VE	TRUE	aph(3')-VI;aac(6')-Ib'.v1	R	R	agree
+Kleborate	Amikacin	Amikacin 30	BKR8JH	TRUE	aac(6')-Ib'.v1	R	S	major error (false resistance)
+Kleborate	Amikacin	Amikacin 30	CAA47J	TRUE	aac(6')-Ib-cr.v2	R	S	major error (false resistance)
+Kleborate	Amikacin	Amikacin 30	CAA4GD	TRUE	aac(6')-Ib-cr.v2	R	S	major error (false resistance)
+Kleborate	Amikacin	Amikacin 30	CAA4X5	TRUE	aac(6')-Ib-cr.v2	R	S	major error (false resistance)
+Kleborate	Amikacin	Amikacin 30	CAA574	TRUE	aac(6')-Ib-cr.v2	R	S	major error (false resistance)
+Kleborate	Amikacin	Amikacin 30	CAA5XX	TRUE	aac(6')-Ib-cr.v2	R	S	major error (false resistance)
+Kleborate	Amikacin	Amikacin 30	CAA5YM	TRUE	aac(6')-Ib-cr.v2	R	S	major error (false resistance)
+Kleborate	Amikacin	Amikacin 30	CAA65Z	TRUE	aac(6')-Ib-cr.v2	R	S	major error (false resistance)
+Kleborate	Amikacin	Amikacin 30	CAA99X	TRUE	aac(6')-Ib-cr.v2	R	S	major error (false resistance)
+Kleborate	Amikacin	Amikacin 30	CAAG9G	FALSE		S	S	agree
+Kleborate	Amikacin	Amikacin 30	CAAGJF	FALSE		S	S	agree
+Kleborate	Amikacin	Amikacin 30	CAAGM3	FALSE		S	S	agree
+Kleborate	Amikacin	Amikacin 30	CAAGNM	FALSE		S	S	agree
+Kleborate	Amikacin	Amikacin 30	CAAHBT	FALSE		S	S	agree
+Kleborate	Amikacin	Amikacin 30	CAAQN6	TRUE	aac(6')-Ib'.v1	R	S	major error (false resistance)
+Kleborate	Amikacin	Amikacin 30	CAASX8	TRUE	aac(6')-Ib-cr.v2	R	S	major error (false resistance)
+Kleborate	Amikacin	Amikacin 30	CAAUM3	FALSE		S	S	agree
+Kleborate	Amikacin	Amikacin 30	CAAWBC	TRUE	aac(6')-Ib-cr.v2	R	S	major error (false resistance)
+Kleborate	Amikacin	Amikacin 30	CAAYXM	FALSE		S	S	agree
+Kleborate	Amikacin	Amikacin 30	CHI11E	FALSE		S	S	agree
+Kleborate	Amikacin	Amikacin 30	CLL32W	TRUE	aac(6')-Ib-cr.v2	R	S	major error (false resistance)
+Kleborate	Amikacin	Amikacin 30	CNS1F1	FALSE		S	S	agree
+Kleborate	Ceftriaxone	Cefpodoxime 10 (Ceftriaxone)	BHB7VE	TRUE	NDM-1;CTX-M-15	R	R	agree
+Kleborate	Ceftriaxone	Cefpodoxime 10 (Ceftriaxone)	BKR8JH	TRUE	CTX-M-15	R	R	agree
+Kleborate	Ceftriaxone	Cefpodoxime 10 (Ceftriaxone)	CAA47J	TRUE	CTX-M-15	R	R	agree
+Kleborate	Ceftriaxone	Cefpodoxime 10 (Ceftriaxone)	CAA4GD	TRUE	CTX-M-15	R	R	agree
+Kleborate	Ceftriaxone	Cefpodoxime 10 (Ceftriaxone)	CAA4X5	TRUE	CTX-M-15	R	R	agree
+Kleborate	Ceftriaxone	Cefpodoxime 10 (Ceftriaxone)	CAA574	TRUE	CTX-M-15	R	R	agree
+Kleborate	Ceftriaxone	Cefpodoxime 10 (Ceftriaxone)	CAA5XX	TRUE	CTX-M-15	R	R	agree
+Kleborate	Ceftriaxone	Cefpodoxime 10 (Ceftriaxone)	CAA5YM	TRUE	CTX-M-15	R	R	agree
+Kleborate	Ceftriaxone	Cefpodoxime 10 (Ceftriaxone)	CAA65Z	TRUE	CTX-M-15	R	R	agree
+Kleborate	Ceftriaxone	Cefpodoxime 10 (Ceftriaxone)	CAA99X	TRUE	CTX-M-15	R	R	agree
+Kleborate	Ceftriaxone	Cefpodoxime 10 (Ceftriaxone)	CAAG9G	TRUE	CTX-M-15	R	R	agree
+Kleborate	Ceftriaxone	Cefpodoxime 10 (Ceftriaxone)	CAAGJF	TRUE	CTX-M-15	R	R	agree
+Kleborate	Ceftriaxone	Cefpodoxime 10 (Ceftriaxone)	CAAGM3	TRUE	CTX-M-15	R	R	agree
+Kleborate	Ceftriaxone	Cefpodoxime 10 (Ceftriaxone)	CAAGNM	TRUE	CTX-M-15	R	R	agree
+Kleborate	Ceftriaxone	Cefpodoxime 10 (Ceftriaxone)	CAAHBT	TRUE	CTX-M-15	R	R	agree
+Kleborate	Ceftriaxone	Cefpodoxime 10 (Ceftriaxone)	CAAQN6	TRUE	CTX-M-15;SHV-12	R	R	agree
+Kleborate	Ceftriaxone	Cefpodoxime 10 (Ceftriaxone)	CAASX8	TRUE	CTX-M-15	R	R	agree
+Kleborate	Ceftriaxone	Cefpodoxime 10 (Ceftriaxone)	CAAUM3	FALSE		S	S	agree
+Kleborate	Ceftriaxone	Cefpodoxime 10 (Ceftriaxone)	CAAWBC	TRUE	CTX-M-15	R	R	agree
+Kleborate	Ceftriaxone	Cefpodoxime 10 (Ceftriaxone)	CAAYXM	FALSE		S	S	agree
+Kleborate	Ceftriaxone	Cefpodoxime 10 (Ceftriaxone)	CHI11E	TRUE	CTX-M-15	R	R	agree
+Kleborate	Ceftriaxone	Cefpodoxime 10 (Ceftriaxone)	CLL32W	TRUE	CTX-M-15	R	R	agree
+Kleborate	Ceftriaxone	Cefpodoxime 10 (Ceftriaxone)	CNS1F1	TRUE	CTX-M-15	R	R	agree
+Kleborate	Ciprofloxacin	Ciprofloxacin 5	BHB7VE	TRUE	qnrS1	R	R	agree
+Kleborate	Ciprofloxacin	Ciprofloxacin 5	BKR8JH	TRUE	qnrS1	R	R	agree
+Kleborate	Ciprofloxacin	Ciprofloxacin 5	CAA47J	TRUE	aac(6')-Ib-cr.v2	R	S	major error (false resistance)
+Kleborate	Ciprofloxacin	Ciprofloxacin 5	CAA4GD	TRUE	aac(6')-Ib-cr.v2	R	S	major error (false resistance)
+Kleborate	Ciprofloxacin	Ciprofloxacin 5	CAA4X5	TRUE	aac(6')-Ib-cr.v2	R	S	major error (false resistance)
+Kleborate	Ciprofloxacin	Ciprofloxacin 5	CAA574	TRUE	aac(6')-Ib-cr.v2	R	S	major error (false resistance)
+Kleborate	Ciprofloxacin	Ciprofloxacin 5	CAA5XX	TRUE	aac(6')-Ib-cr.v2	R	S	major error (false resistance)
+Kleborate	Ciprofloxacin	Ciprofloxacin 5	CAA5YM	TRUE	aac(6')-Ib-cr.v2	R	S	major error (false resistance)
+Kleborate	Ciprofloxacin	Ciprofloxacin 5	CAA65Z	TRUE	aac(6')-Ib-cr.v2	R	S	major error (false resistance)
+Kleborate	Ciprofloxacin	Ciprofloxacin 5	CAA99X	TRUE	aac(6')-Ib-cr.v2	R	S	major error (false resistance)
+Kleborate	Ciprofloxacin	Ciprofloxacin 5	CAAG9G	FALSE		S	S	agree
+Kleborate	Ciprofloxacin	Ciprofloxacin 5	CAAGJF	FALSE		S	S	agree
+Kleborate	Ciprofloxacin	Ciprofloxacin 5	CAAGM3	FALSE		S	S	agree
+Kleborate	Ciprofloxacin	Ciprofloxacin 5	CAAGNM	FALSE		S	S	agree
+Kleborate	Ciprofloxacin	Ciprofloxacin 5	CAAHBT	FALSE		S	S	agree
+Kleborate	Ciprofloxacin	Ciprofloxacin 5	CAAQN6	TRUE	qnrB1.v1	R	S	major error (false resistance)
+Kleborate	Ciprofloxacin	Ciprofloxacin 5	CAASX8	TRUE	aac(6')-Ib-cr.v2	R	R	agree
+Kleborate	Ciprofloxacin	Ciprofloxacin 5	CAAUM3	FALSE		S	R	very major error (missed resistance)
+Kleborate	Ciprofloxacin	Ciprofloxacin 5	CAAWBC	TRUE	qnrB2.v1^;aac(6')-Ib-cr.v2;GyrA:p.Ser83Phe;GyrA:p.Asp87Ala;ParC:p.Ser80Ile	R	R	agree
+Kleborate	Ciprofloxacin	Ciprofloxacin 5	CAAYXM	FALSE		S	S	agree
+Kleborate	Ciprofloxacin	Ciprofloxacin 5	CHI11E	FALSE		S	S	agree
+Kleborate	Ciprofloxacin	Ciprofloxacin 5	CLL32W	TRUE	qnrB1.v2^;aac(6')-Ib-cr.v2;GyrA:p.Ser83Ile;ParC:p.Ser80Ile	R	R	agree
+Kleborate	Ciprofloxacin	Ciprofloxacin 5	CNS1F1	FALSE		S	S	agree
+Kleborate	Gentamicin	Gentamicin 10	BHB7VE	TRUE	aac(3)-IId^	R	R	agree
+Kleborate	Gentamicin	Gentamicin 10	BKR8JH	TRUE	aac(3)-IIa.v1^	R	R	agree
+Kleborate	Gentamicin	Gentamicin 10	CAA47J	TRUE	aac(3)-IIa.v1^	R	R	agree
+Kleborate	Gentamicin	Gentamicin 10	CAA4GD	TRUE	aac(3)-IIa.v1^	R	R	agree
+Kleborate	Gentamicin	Gentamicin 10	CAA4X5	TRUE	aac(3)-IIa.v1^	R	R	agree
+Kleborate	Gentamicin	Gentamicin 10	CAA574	TRUE	aac(3)-IIa.v1^	R	R	agree
+Kleborate	Gentamicin	Gentamicin 10	CAA5XX	TRUE	aac(3)-IIa.v1^	R	R	agree
+Kleborate	Gentamicin	Gentamicin 10	CAA5YM	TRUE	aac(3)-IIa.v1^	R	R	agree
+Kleborate	Gentamicin	Gentamicin 10	CAA65Z	TRUE	aac(3)-IIa.v1^	R	R	agree
+Kleborate	Gentamicin	Gentamicin 10	CAA99X	TRUE	aac(3)-IIa.v1^	R	R	agree
+Kleborate	Gentamicin	Gentamicin 10	CAAG9G	TRUE	aac(3)-IId^	R	R	agree
+Kleborate	Gentamicin	Gentamicin 10	CAAGJF	TRUE	aac(3)-IId^	R	R	agree
+Kleborate	Gentamicin	Gentamicin 10	CAAGM3	TRUE	aac(3)-IId^	R	R	agree
+Kleborate	Gentamicin	Gentamicin 10	CAAGNM	TRUE	aac(3)-IId^	R	R	agree
+Kleborate	Gentamicin	Gentamicin 10	CAAHBT	TRUE	aac(3)-IId^	R	R	agree
+Kleborate	Gentamicin	Gentamicin 10	CAAQN6	TRUE	aac(3)-IId^	R	R	agree
+Kleborate	Gentamicin	Gentamicin 10	CAASX8	TRUE	aac(3)-IIa.v1	R	R	agree
+Kleborate	Gentamicin	Gentamicin 10	CAAUM3	FALSE		S	S	agree
+Kleborate	Gentamicin	Gentamicin 10	CAAWBC	TRUE	aac(3)-IIa.v1	R	R	agree
+Kleborate	Gentamicin	Gentamicin 10	CAAYXM	FALSE		S	S	agree
+Kleborate	Gentamicin	Gentamicin 10	CHI11E	TRUE	aac(3)-IId^	R	R	agree
+Kleborate	Gentamicin	Gentamicin 10	CLL32W	TRUE	aac(3)-IIa.v1^	R	R	agree
+Kleborate	Gentamicin	Gentamicin 10	CNS1F1	TRUE	aac(3)-IId^	R	R	agree
+Kleborate	Meropenem	Meropenem 10	CAAQN6	FALSE		S	S	agree
+Kleborate	Meropenem	Meropenem 10	CAASX8	FALSE		S	S	agree
+Kleborate	Meropenem	Meropenem 10	CAAUM3	FALSE		S	S	agree
+Kleborate	Meropenem	Meropenem 10	CAAWBC	FALSE		S	S	agree
+Kleborate	Meropenem	Meropenem 10	CAAYXM	FALSE		S	S	agree
+Kleborate	Meropenem	Meropenem 10	CHI11E	FALSE		S	S	agree
+Kleborate	Meropenem	Meropenem 10	CLL32W	FALSE		S	S	agree
+Kleborate	Meropenem	Meropenem 10	CNS1F1	FALSE		S	S	agree
