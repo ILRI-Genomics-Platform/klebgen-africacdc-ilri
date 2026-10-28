@@ -131,6 +131,13 @@ plot(res, "trace")                    # the chains should look like flat, hairy 
 > If root-to-tip regression shows no clear positive slope, do not report a dated tree: say that the data cannot
 > date the cluster. Honest uncertainty is a valid result.
 
+> [!NOTE]
+> `loadGubbins()` and `useRec = TRUE` both need Gubbins output. If the pipeline ran with `--skip_gubbins` (or
+> Gubbins was skipped for this group because too few isolates had enough data), there is none: read the tree
+> with `ape::read.tree()` instead and run `bactdate(tree, dates, useRec = FALSE)`. The rate and root date are
+> then **recombination-naive** — recombination imports many substitutions at once, so an uncorrected rate is
+> usually too high and the root date too recent. Report that limitation with the estimate.
+
 <details>
 <summary><b>What does the date of the cluster's most recent common ancestor tell an IPC team?</b></summary>
 
@@ -174,6 +181,10 @@ bloodstream infections are linked. You have 5 minutes to present and 10 minutes 
 
 **Agree on two actions**, for example: environmental sampling of sinks and incubators; a hand-hygiene and
 cleaning audit; screening of newly admitted babies; review of empiric antibiotic guidance.
+
+> [!NOTE]
+> Trainers: model answers for each of the four questions, the weak answers to watch for, and how to mark the
+> session are in `course/TRAINER_GUIDE.md`, section 9.
 
 ---
 

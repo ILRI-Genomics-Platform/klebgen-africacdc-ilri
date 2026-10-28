@@ -62,7 +62,8 @@ workflow NEONATAL_AMR {
             params.phylo_reference_dir,
             params.phylo_references,
             params.phylo_min_group_size,
-            params.phylo_method
+            params.phylo_method,
+            params.skip_gubbins
         )
     }
 

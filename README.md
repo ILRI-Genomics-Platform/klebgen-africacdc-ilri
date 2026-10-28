@@ -266,6 +266,36 @@ closely related isolates (one ST, an outbreak) it uses sequence the reference la
 within about 15 bp of another variant, and indels, so for diverse groups Snippy is the safer choice.
 Derelle *et al.* 2024, *Genome Research* 34:1661, [doi:10.1101/gr.279449.124](https://doi.org/10.1101/gr.279449.124).
 
+### Recombination filtering (`--skip_gubbins`)
+
+By default Gubbins masks recombinant regions before the tree is built, and `snp-dists` reports distances from
+the filtered sites. `--skip_gubbins` turns that off: the tree is built on the alignment itself and is **not**
+recombination-corrected. Say so in your methods if you use it.
+
+| `--phylo_method` | `--skip_gubbins` | SKA2 runs | Tree built from |
+| --- | --- | --- | --- |
+| `snippy` | `false` (default) | — | Gubbins-filtered SNP sites |
+| `snippy` | `true` | — | the cleaned core alignment |
+| `ska2` | `false` (default) | `ska map` | Gubbins-filtered SNP sites |
+| `ska2` | `true` | **`ska align`** (reference-free) | the `ska align` alignment, IQ-TREE with `+ASC` |
+| `both` | `false` (default) | `ska map` | Gubbins-filtered SNP sites, per method |
+| `both` | `true` | `ska map` | the cleaned alignments, per method |
+
+With `--phylo_method ska2` alone, skipping Gubbins also makes SKA2 reference-free: `ska align` writes the
+variant split k-mers with no `Reference` row and no genome coordinates, which is why Gubbins cannot run on it
+(it finds recombination from SNP density **along** the genome). In `both` mode SKA2 stays on `ska map` so that
+its alignment keeps the same coordinates as Snippy's and `bin/compare_snp_methods.py` remains like-for-like.
+
+Reference-free mode still needs `--phylo_reference_sheet` in `species`/`kleborate` grouping: the sheet decides
+which group an isolate belongs to, even though the reference file is no longer staged into SKA2.
+
+Skipping Gubbins is reasonable within one ST over a few years, where there is little recombination to find and
+masking a handful of SNPs can make isolates look identical. It is a poor choice for a group spanning several
+STs — including `--phylo_grouping species`, where one group holds an entire species — because uncorrected
+branch lengths and topology there are unreliable. `--skip_gubbins` also disables the exclusion of isolates with
+more than 25% missing data (they stay in the tree, with a warning), and leaves no Gubbins output for
+`bin/run_bactdating.R`, which needs `useRec = FALSE` instead.
+
 ## Learning the steps first: `step_by_step/`
 
 Before running the pipeline, trainees can run the same commands themselves, one step at a time:
@@ -345,6 +375,7 @@ section 7.
 | `--phylo_references` | none | Samplesheet mode: CSV `group,fasta`; by default each group's own best assembly (hybrid first, then fewest contigs) |
 | `--phylo_method` | `snippy` | `snippy` (map to the reference), `ska2` (split k-mers; also reference-free SNP distances), or `both` (to compare; SKA2 results in `<group>_ska2/`) |
 | `--phylo_min_group_size` | 3 | Smallest group analysed (2 or more). Groups of 3+ get Gubbins, a tree and SNP distances; a group of 2 gets SNP distances only |
+| `--skip_gubbins` | false | No recombination filtering; the tree is not recombination-corrected. With `--phylo_method ska2` (alone), SKA2 runs `ska align` (reference-free) instead of `ska map` |
 | `--skip_phylogeny` | false | Skip Module 6 |
 | `--skip_kaptive` | false | No standalone Kaptive report (Kleborate's K/O columns remain) |
 | `--run_prokka` | false | Annotate every assembly with Prokka (results in `02_assembly/prokka/`, summary in MultiQC) |
