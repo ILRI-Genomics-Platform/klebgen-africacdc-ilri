@@ -28,50 +28,153 @@ By the end of today you can:
 
 ### 8.4 An annotated tree with ggtree
 
+A published tree figure is a tree plus *rings* of metadata outside the tips, each with its own colour scale, and
+the clades of interest shaded and labelled. Three packages do the work: `ggtree` draws the tree, `ggtreeExtra`
+adds the rings (`geom_fruit()`), and `ggnewscale` lets one plot carry more than one `fill` scale
+(`new_scale_fill()`) — without it, the second ring would overwrite the first ring's colours.
+
 ```r
 library(tidyverse)
 library(ape)
 library(ggtree)
+library(ggtreeExtra)   # geom_fruit(): rings of data outside the tips
+library(ggnewscale)    # new_scale_fill(): a second, third, fourth fill scale on one plot
 setwd(Sys.getenv("COURSE"))
+source("bin/dviz_theme.R")   # dviz_font_family, already checked against the fonts installed here
 
 master <- read_tsv("results/08_integration/master_table.tsv")
 tree   <- read.tree("results/06_phylogeny/ST39/ST39.treefile")
 tree   <- drop.tip(tree, "Reference")
 tree   <- root(tree, outgroup = "D29438", resolve.root = TRUE)   # the 2005 isolate as outgroup
 
-p <- ggtree(tree) %<+% master +
-  geom_tiplab(align = TRUE, size = 3, offset = 0.5) +
+span <- max(node.depth.edgelength(tree))   # tree depth, for offsets below
+```
+
+**Step 1 — one annotation row per tip, in the tree's own order.** Start from the tip labels, not from the
+master table: that guarantees one row per tip even when an isolate is missing from the metadata, and it puts
+the rows in the order `ggtree` expects.
+
+```r
+ann <- tibble(sample = tree$tip.label) |>
+  left_join(master, by = "sample") |>
+  mutate(
+    # 15 K loci means 15 colours and no message. Keep those seen >= 3 times, pool the rest.
+    K_group = fct_lump_min(factor(replace_na(K_locus, "unknown")), min = 3, other_level = "Other"),
+    # One ring instead of two yes/no rings: the strongest beta-lactam mechanism found
+    Betalactam = case_when(
+      replace_na(carbapenemase, FALSE) ~ "Carbapenemase",
+      replace_na(ESBL_or_AmpC,  FALSE) ~ "ESBL / AmpC",
+      TRUE                             ~ "Neither"
+    ) |> factor(levels = c("Carbapenemase", "ESBL / AmpC", "Neither")),
+    Year = factor(collection_year)
+  )
+
+missing <- ann$sample[is.na(ann$ST)]
+if (length(missing)) message("no metadata for: ", paste(missing, collapse = ", "))
+```
+
+**Step 2 — the clades to shade.** Find the most recent common ancestor of each ST with at least two tips.
+`getMRCA()` takes tip *labels* and returns a node *number*, which is what `geom_highlight()` and
+`geom_cladelab()` want.
+
+```r
+clade_sts <- ann |> filter(!is.na(ST)) |> count(ST) |> filter(n >= 2) |> pull(ST)
+
+clades <- tibble(ST = clade_sts, clade = paste0("ST", clade_sts)) |>
+  mutate(node = map_int(ST, \(st) as.integer(getMRCA(tree, ann$sample[ann$ST == st & !is.na(ann$ST)]))))
+
+clade_cols <- setNames(
+  colorRampPalette(c("lightblue3", "lightpink3", "mediumpurple2"))(nrow(clades)),
+  clades$clade)
+clades
+```
+
+**Step 3 — the tree, then the rings.** Each ring is `new_scale_fill()` followed by `geom_fruit()` and the
+scale for that ring. `offset` and `pwidth` in `geom_fruit()` are fractions of the tree's width; the offsets in
+`geom_tiplab()` and `geom_cladelab()` are in branch-length units, which is why they are written as multiples of
+`span`.
+
+```r
+p <- ggtree(tree, layout = "rectangular", linewidth = 0.5) %<+% ann +
+  geom_highlight(data = clades, aes(node = node, fill = clade),
+                 alpha = 0.15, align = "right", extend = 0.6 * span, show.legend = FALSE) +
+  geom_cladelab(data = clades, mapping = aes(node = node, label = clade),
+                barcolour = clade_cols[clades$clade], barsize = 1.5,
+                align = TRUE, offset = 0.45 * span, fontsize = 3) +
   geom_tippoint(aes(colour = ward), size = 2.5) +
-  geom_treescale() +
-  theme(legend.position = "bottom")
+  geom_tiplab(align = TRUE, linesize = 0.2, size = 2.6, offset = 0.03 * span) +
+  geom_treescale(fontsize = 2.6) +
+  scale_colour_brewer(palette = "Dark2", na.value = "grey70", name = "Ward") +
+  scale_fill_manual(values = clade_cols, breaks = clades$clade, guide = "none")
 
-# Heatmap strips beside the tips: one column per feature, values as text
-strips <- master |>
-  filter(sample %in% tree$tip.label) |>
-  transmute(sample,
-            Year          = as.character(collection_year),
-            Neonate       = neonate,
-            ESBL          = if_else(ESBL_or_AmpC, "yes", "no"),
-            Carbapenemase = if_else(carbapenemase, "yes", "no"),
-            `K locus`     = K_locus) |>
-  column_to_rownames("sample")
+fig <- p +
+  new_scale_fill() +
+  geom_fruit(geom = geom_tile, mapping = aes(y = sample, fill = Betalactam),
+             offset = 0.10, pwidth = 0.08, alpha = 0.9, linewidth = 0,
+             position = position_identityx()) +
+  scale_fill_manual(name = "Beta-lactam",
+                    values = c("Carbapenemase" = "#b2182b",
+                               "ESBL / AmpC"   = "#ef8a62",
+                               "Neither"       = "#f0f0f0"),
+                    na.value = "grey90",
+                    guide = guide_legend(order = 2, override.aes = list(size = 4))) +
+  new_scale_fill() +
+  geom_fruit(geom = geom_tile, mapping = aes(y = sample, fill = K_group),
+             offset = 0.05, pwidth = 0.08, alpha = 0.9, linewidth = 0,
+             position = position_identityx()) +
+  scale_fill_brewer(name = "K locus", palette = "Set3", na.value = "grey90",
+                    guide = guide_legend(order = 3, ncol = 2)) +
+  new_scale_fill() +
+  geom_fruit(geom = geom_tile, mapping = aes(y = sample, fill = Year),
+             offset = 0.05, pwidth = 0.08, alpha = 0.9, linewidth = 0,
+             position = position_identityx()) +
+  scale_fill_viridis_d(name = "Year", option = "D", na.value = "grey90",
+                       guide = guide_legend(order = 4)) +
+  theme_tree() +
+  theme(text              = element_text(family = dviz_font_family),
+        legend.position   = "right",
+        legend.background = element_blank(),
+        legend.key        = element_blank(),
+        legend.title      = element_text(size = 10),
+        legend.text       = element_text(size = 9)) +
+  guides(colour = guide_legend(order = 1, ncol = 1, override.aes = list(size = 3)))
+fig
 
-gheatmap(p, strips, offset = 6, width = 1.2, colnames_angle = 45, colnames_offset_y = -0.5,
-         font.size = 3, hjust = 1) +
-  scale_fill_viridis_d(option = "D", na.value = "grey90", name = "")
-
-ggsave("results/08_integration/ST39_tree.png", width = 10, height = 6, dpi = 300)
+dir.create("results/08_integration", showWarnings = FALSE, recursive = TRUE)
+ggsave("results/08_integration/ST39_tree.png", fig, width = 11, height = 7, dpi = 300)
+ggsave("results/08_integration/ST39_tree.pdf", fig, width = 11, height = 7,
+       device = if (capabilities("cairo")) cairo_pdf else pdf)
 ```
 
 > [!TIP]
-> If the strips overlap the tip labels, increase `offset`. If the legend is unreadable, plot fewer strips: a
-> figure for a report should carry one message.
+> Tuning the figure, in the order worth trying:
+> - Rings overlapping the tip labels, or each other: raise the first ring's `offset`; the later ones are
+>   measured from the ring before them.
+> - Rings too thin or too fat: `pwidth`.
+> - Clade labels off the edge of the panel: lower `offset` in `geom_cladelab()`, or add
+>   `+ xlim(0, 2 * span)`.
+> - Legend crowding the tree: `ncol` inside `guide_legend()`, or drop a ring. A figure for a report should
+>   carry one message; three rings is usually the limit before it carries none.
+
+> [!WARNING]
+> `getMRCA()` returns the ancestor of the tips you give it, which is the clade you want **only if that ST is
+> monophyletic**. If an ST is scattered across the tree, the highlight will swallow unrelated isolates. Check
+> each shaded block against the tip labels before the figure leaves your screen, and drop any ST that does not
+> hold together — then say so in the caption.
+
+> [!NOTE]
+> Column names here are the ones built by hand on Day 8 (`ESBL_or_AmpC`, `carbapenemase`, `K_locus`). The
+> master table written by `bin/aggregate_results.py` / `.R` uses the aggregator's own names — `esbl_or_ampc`,
+> `carbapenemase`, `kleborate_K_locus`, `kaptive_K_locus`. Run `names(master)` first and adjust.
 
 **Questions for your figure:**
 
 1. Does the cluster form one clade with short branches?
 2. Do ward colours line up with the clade?
-3. Which isolate breaks the pattern, and what does that suggest?
+3. Do the resistance and K locus rings change at the same point in the tree, or independently? A ring that
+   changes *within* a clade is a gene moving between related isolates; a ring that changes *between* clades is
+   two separate lineages.
+4. Which isolate breaks the pattern, and what does that suggest?
 
 ### 8.5 Global context
 

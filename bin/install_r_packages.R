@@ -18,8 +18,11 @@ dir.create(lib, recursive = TRUE, showWarnings = FALSE)
 
 packages <- list(
     cran   = c("ggplot2", "ape", "coda", "ggnewscale", "ggalluvial",
+               "cowplot",        # the dviz themes in bin/dviz_theme.R
                "tidyverse"),     # tidyverse (readr, dplyr, tidyr, ...): the course's R sessions (Days 4, 7-9)
-    bioc   = c("ggtree", "ComplexHeatmap"),
+    bioc   = c("ggtree",
+               "ggtreeExtra",     # geom_fruit(): the metadata rings on the Day 9 tree figure
+               "ComplexHeatmap"),
     github = c(BactDating = "xavierdidelot/BactDating")
 )
 cat("Installing into", lib, "\n")

@@ -335,6 +335,23 @@ write_tsv(master, "results/08_integration/master_table.tsv")
 glimpse(master)
 ```
 
+> [!TIP]
+> For your own run, `bin/aggregate_results.py` (or `bin/aggregate_results.R` — same options, same output
+> file names) does these joins for every tool at once: it adds Kaptive, CheckM2, QUAST and the
+> nearest-neighbour SNP columns, skips tools that were not run, and writes the summary tables too.
+> The pipeline already runs the Python one at the end of a run, unless you pass `--skip_aggregate`.
+>
+> ```bash
+> bin/aggregate_results.py --results results --metadata training_data/metadata_compact.tsv \
+>     --summaries --group-by ST,kleborate_species,ward --long
+>
+> bin/run_R.sh aggregate_results.R --results results --metadata training_data/metadata_compact.tsv \
+>     --summaries --group-by ST,kleborate_species,ward --long
+> ```
+>
+> Build the table by hand first, though. The point of this section is seeing what a join does to the row
+> count, and the script hides that behind a one-line summary.
+
 > [!WARNING]
 > After every join, check the number of rows: `nrow(master)` should still be 29. More rows means a sample ID
 > appears twice in one table; fewer rows (after an `inner_join`) means IDs do not match. A common cause is a
