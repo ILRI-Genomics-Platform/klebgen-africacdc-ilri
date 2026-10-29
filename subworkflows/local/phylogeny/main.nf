@@ -258,10 +258,10 @@ workflow PHYLOGENY {
     // ---- remove recombination, then build the tree on the filtered SNP sites.
     // nf-core gubbins has no meta map; outputs are named after the input file
     // (<group>.aln), so the group ID is recovered from the file name.
-    // Reference-free alignments cannot go through Gubbins, so they go straight to the tree. 'asc' tells
-    // IQ-TREE the alignment has no constant sites (conf/modules.config).
+    // Reference-free alignments cannot go through Gubbins, so they go straight to the tree. They keep
+    // their invariant sites (ska align does not drop them), so IQ-TREE needs no ASC correction.
     ch_variant = ch_aln.variant
-        .map { meta, aln -> [meta.group, meta + [asc: true], aln] }
+        .map { meta, aln -> [meta.group, meta, aln] }
         .combine(ch_group_sizes, by: 0)
         .branch { _group, meta, aln, n ->
             tree: n >= 3

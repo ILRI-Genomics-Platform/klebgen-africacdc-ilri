@@ -114,31 +114,97 @@ neo |> count(O_group, sort = TRUE) |> mutate(percent = round(100 * n / sum(n), 1
 valencies <- c("O1", "O2", "O3b", "O5")
 neo |> summarise(n = n(), covered = sum(O_group %in% valencies), percent = round(100 * covered / n, 1))
 
-# How many K loci are needed to cover 50% and 70% of neonatal isolates?
-k_curve <- neo |>
-  filter(!str_detect(K_locus, "unknown")) |>
-  count(K_locus, sort = TRUE) |>
-  mutate(rank = row_number(), cumulative_percent = 100 * cumsum(n) / nrow(neo))
-k_curve |> filter(cumulative_percent >= 50) |> slice(1)
-k_curve |> filter(cumulative_percent >= 70) |> slice(1)
+# Cumulative coverage: add antigens one at a time, commonest first.
+# Both curves divide by the SAME denominator (every neonatal isolate), so an unknown or
+# untypeable isolate counts as NOT covered on both. Different denominators would make the
+# comparison between K and O meaningless.
+n_neo <- nrow(neo)
+coverage_curve <- function(data, col, label, denom) {
+  data |>
+    rename(type = all_of(col)) |>
+    filter(!str_detect(type, "unknown")) |>
+    count(type, sort = TRUE) |>
+    mutate(rank = row_number(),
+           cumulative_percent = 100 * cumsum(n) / denom,
+           antigen = label)
+}
+k_curve <- coverage_curve(neo, "K_locus", "Capsule (K locus)", n_neo)
+o_curve <- coverage_curve(neo, "O_group", "O antigen",         n_neo)
+
+# How many valencies to reach each target?
+reach <- function(curve, target) {
+  hits <- curve$rank[curve$cumulative_percent >= target]
+  if (length(hits) == 0) NA_integer_ else min(hits)
+}
+tibble(target_percent = c(50, 70, 90)) |>
+  mutate(K_loci  = map_int(target_percent, ~ reach(k_curve, .x)),
+         O_types = map_int(target_percent, ~ reach(o_curve, .x)))
 
 ggplot(k_curve, aes(rank, cumulative_percent)) +
   geom_step() + geom_hline(yintercept = c(50, 70), linetype = 2) +
+  expand_limits(y = 0) +                       # never truncate a y axis you will interpret
   labs(x = "Number of K loci in vaccine (most common first)",
        y = "Neonatal isolates covered (%)",
        title = "Capsule-based vaccine: valencies needed") +
   theme_minimal()
 ggsave("results/07_antigens/k_coverage_curve.png", width = 7, height = 4)
 
+# The same for O, on the same axes: the comparison is the point
+curves <- bind_rows(k_curve, o_curve)
+ends   <- curves |> group_by(antigen) |> slice_max(rank, n = 1) |> ungroup()
+
+ggplot(curves, aes(rank, cumulative_percent, colour = antigen)) +
+  geom_hline(yintercept = c(50, 70, 90), linetype = 2, colour = "grey60") +
+  geom_step(linewidth = 0.9) +
+  geom_point(data = ends, size = 2) +
+  geom_text(data = ends, size = 3.5, hjust = -0.15, show.legend = FALSE,
+            aes(label = sprintf("%.0f%% with %d", cumulative_percent, rank))) +
+  scale_x_continuous(expand = expansion(mult = c(0.02, 0.18))) +
+  expand_limits(y = 0) +
+  labs(x = "Number of antigens in the vaccine (most common first)",
+       y = "Neonatal isolates covered (%)", colour = NULL,
+       title = "How many valencies would a vaccine need?",
+       subtitle = paste0(n_neo, " neonatal isolates; an unknown type counts as not covered")) +
+  theme_minimal() + theme(legend.position = "top")
+ggsave("results/07_antigens/ko_coverage_curve.png", width = 8, height = 4.5)
+
 # Does coverage change over time?
-neo |>
+periods <- neo |>
   filter(!is.na(collection_year)) |>
   mutate(period = cut(collection_year, c(1995, 2009, 2015, 2020),
-                      labels = c("1996-2009", "2010-2015", "2016-2020"))) |>
+                      labels = c("1996-2009", "2010-2015", "2016-2020")))
+
+periods |>
   group_by(period) |>
   summarise(n = n(), O4valent_percent = round(100 * mean(O_group %in% valencies), 1),
             KL2_percent = round(100 * mean(K_locus == "KL2"), 1))
+
+# The honest test: design the vaccine on the EARLIEST period only, then score that fixed
+# set on every period. This is the question a vaccine developer actually faces, because the
+# ranking is only known in retrospect.
+design <- function(data, col, n_valencies) {
+  data |> rename(type = all_of(col)) |>
+    filter(!str_detect(type, "unknown")) |>
+    count(type, sort = TRUE) |> slice_head(n = n_valencies) |> pull(type)
+}
+early  <- periods |> filter(period == "1996-2009")
+k_set  <- design(early, "K_locus", 8)
+o_set  <- design(early, "O_group", 4)
+k_set; o_set
+
+periods |>
+  group_by(period) |>
+  summarise(n = n(),
+            K8_designed_1996 = round(100 * mean(K_locus %in% k_set), 1),
+            O4_designed_1996 = round(100 * mean(O_group %in% o_set), 1),
+            .groups = "drop")
 ```
+
+> [!WARNING]
+> The first two periods hold about 30 isolates each against 321 in the last, so put a confidence
+> interval on every one of these percentages before you compare them. Reuse `prop_ci()` from Day 4
+> (section 4.6), which wraps `binom.test`. On these numbers the 2016–2020 interval is about 6 points
+> wide and the 2010–2015 one about 30.
 
 <details>
 <summary><b>Answers (from the published data)</b></summary>
@@ -173,8 +239,47 @@ whether you grouped O12 into O1.
 - **One hospital.** Antigen distributions differ between sites and countries.
 - **Time.** Most neonatal isolates are from 2016–2020, and the earlier periods have only about 30 isolates each.
   The study found repeated replacement of dominant clones over 20 years, so coverage can shift as clones change.
+  Put intervals on the period figures before reading anything into them: four-valent O coverage is
+  94.3% [81.4–98.4] in 1996–2009, 73.3% [55.6–85.8] in 2010–2015 and 91.0% [87.3–93.6] in 2016–2020
+  (95% Wilson). The dip **is** distinguishable from the last period (Fisher exact, *p* = 0.007), so it is not
+  merely small-sample noise — but a 30-point-wide interval means "coverage fell" is supportable while
+  "coverage fell to 73%" is not.
 - **KL2 is driven partly by clusters.** If one KL2 clone caused an outbreak, KL2 looks more common than it is
   across independent infections. One option is to count each cluster once (deduplicate by cluster).
+
+</details>
+
+<details>
+<summary><b>Discussion: reading the curves, and what shifts over time</b></summary>
+
+**The curve is an upper bound, not an expectation.** Loci are ranked by frequency observed across 20 years,
+and the curve assumes you knew that ranking in advance. A real vaccine is designed before the ranking is
+known and then used for decades.
+
+**Diminishing returns.** One K locus buys ~40%; eight buy ~70%; reaching 90% needs around 30. Every valency
+adds cost, manufacturing complexity and possible immune interference, so the flat tail is unreachable in
+practice even though it is drawn. Four O types reach ~90% — that asymmetry is the case for an O-antigen
+vaccine in one line.
+
+**Neither curve reaches 100%.** The K curve plateaus near 93% because isolates with an untypeable K locus
+are in the denominator and can never be covered. Part of K's lower ceiling is therefore typeability, not
+diversity — worth saying out loud, because the two curves have different unknown rates.
+
+**Why K is the more fragile target.** The steep left-hand end is carried by a few dominant clones, and this
+hospital's data documents repeated clone replacement: KL2 went 22.9% → 26.7% → 43.0% across the three
+periods. Capsule switching compounds it, because a lineage can swap its K locus by recombination without
+changing ST — the ST39 isolates in this collection span KL2, KL23, KL51, KL62 and KL149 (Day 8, section 7.3).
+So even a clone that persists can escape a capsule vaccine. The O locus recombines far less and O1 is spread
+across many lineages, so it is buffered against clone turnover — a second argument for O, independent of the
+valency arithmetic.
+
+**The paradox worth naming:** on the K curve the first valency is both the highest-yield and the least
+durable. The flat tail is stable only in the sense of being uniformly useless.
+
+**What follows for design.** Do not pick valencies by optimising on the pooled data; that fits the ranking you
+happen to have observed. Prefer the set that maximises the *worst* period's coverage, report coverage as a
+range across periods rather than a point estimate, and treat today's typing as the baseline that makes
+serotype replacement detectable after introduction — the lesson from PCV7 and the rise of 19A.
 
 </details>
 
@@ -267,7 +372,10 @@ master |> count(ST, sort = TRUE)
 ## End-of-day checklist
 
 - [ ] Kaptive K and O results for all 29 isolates, compared with the published calls.
-- [ ] Vaccine-coverage results and the K coverage curve (`results/07_antigens/k_coverage_curve.png`).
+- [ ] Vaccine-coverage results, the K coverage curve (`results/07_antigens/k_coverage_curve.png`) and the
+      K-versus-O comparison (`results/07_antigens/ko_coverage_curve.png`).
+- [ ] The fixed-set-over-time table: how an eight-valent K and a four-valent O vaccine designed on
+      1996–2009 would have performed later.
 - [ ] `results/08_integration/master_table.tsv` with 29 rows.
 - [ ] Every disagreement with the published typing explained.
 

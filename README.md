@@ -277,7 +277,7 @@ recombination-corrected. Say so in your methods if you use it.
 | `snippy` | `false` (default) | — | Gubbins-filtered SNP sites |
 | `snippy` | `true` | — | the cleaned core alignment |
 | `ska2` | `false` (default) | `ska map` | Gubbins-filtered SNP sites |
-| `ska2` | `true` | **`ska align`** (reference-free) | the `ska align` alignment, IQ-TREE with `+ASC` |
+| `ska2` | `true` | **`ska align`** (reference-free) | the `ska align` alignment, which keeps its invariant sites |
 | `both` | `false` (default) | `ska map` | Gubbins-filtered SNP sites, per method |
 | `both` | `true` | `ska map` | the cleaned alignments, per method |
 
@@ -392,9 +392,76 @@ results/
 ├── 04_amr/           amrfinderplus
 ├── 05_plasmids/      mobsuite
 ├── 06_phylogeny/     <group>/ (core alignment, tree, SNP distances; Snippy or SKA2), <group>_ska2/ (--phylo_method both), gubbins/
+├── 09_aggregate/     master_table.tsv (one row per isolate), *_long.tsv, aggregate_summary.txt
 ├── multiqc/          multiqc_report.html
 └── pipeline_info/    software versions, execution report, timeline, trace
 ```
+
+Each stage folder also gets that tool's own aggregated table (`03_typing/kleborate_all.tsv`,
+`04_amr/amrfinderplus_all.tsv`, ...) unless you pass `--skip_aggregate`.
+
+### Aggregating the results
+
+The pipeline does this itself, in a final `AGGREGATE_RESULTS` step, unless you pass
+`--skip_aggregate`. Every source is staged into the task's work directory, so the step never reads
+`results/` while it is being written, and `-resume` behaves normally. `--aggregate_metadata
+<tsv>` merges extra per-isolate columns (ward, year, AST) into the isolate-level table.
+
+The tool tables are published next to the results they summarise, and the rest to `09_aggregate/`:
+
+```text
+results/
+├── 01_qc/            ... fastp_all.tsv, kraken2_species_all.tsv, bracken_all.tsv
+├── 02_assembly/      ... quast_all.tsv, checkm2_all.tsv, bakta_all.tsv
+├── 03_typing/        ... kleborate_all.tsv, kaptive_K_all.tsv, kaptive_O_all.tsv
+├── 04_amr/           ... amrfinderplus_all.tsv
+├── 05_plasmids/      ... mobtyper_all.tsv
+└── 09_aggregate/     master_table.tsv, *_long.tsv, aggregate_summary.txt
+```
+
+The same thing can be run by hand with `bin/aggregate_results.py`, which is useful for
+re-aggregating after a run, or across several runs:
+
+```bash
+bin/aggregate_results.py --results results --long --tool-tables
+bin/aggregate_results.py --results results --samplesheet samplesheet.csv \
+    --metadata training_data/metadata_compact.tsv --long
+```
+
+Standard library only, so no pandas is needed (unlike `bin/compare_snp_methods.py`) and the
+pipeline step needs no container image. It writes one table per **unit of observation**:
+
+| Table | One row per | Contents |
+| --- | --- | --- |
+| `master_table.tsv` | isolate | QC, assembly, CheckM2, Kleborate, Kaptive, plus chosen summaries of the many-per-isolate results |
+| `<tool>_all.tsv` | that tool's own row | `--tool-tables`: every row of every file, the tool's columns verbatim plus `sample` |
+| `amr_genes_long.tsv` | gene hit | `--long` |
+| `plasmids_long.tsv` | plasmid | `--long` |
+| `snp_distances_long.tsv` | pair of isolates | `--long`, from `snp-dists` and `ska distance` |
+| `aggregate_summary.txt` | — | what was found, what was missing, which directory each source came from |
+
+Run `--describe` for what can and cannot be combined. In short: results that are one row per
+isolate are joined; results with many rows per isolate (AMR genes, plasmids, annotation features)
+can only enter the wide table as a summary, which loses the relationship — `n_plasmids = 3` cannot
+say which plasmid carries which gene; and results whose unit is **not** an isolate cannot be joined
+at all. SNP distances are per *pair*, trees per *group*, Gubbins predictions per *branch*, plasmid
+clusters per *plasmid*. Those go in their own tables. The exception is an explicit reduction:
+`phylo_group`, `nearest_sample`, `nearest_snps` and `n_within_<N>_snps` (`--snp-threshold`) are in
+the wide table because the reduction from pairs to isolates is stated.
+
+Any source can be read from somewhere else, so results need not be under one `--outdir`:
+
+```bash
+bin/aggregate_results.py --list-sources                  # the source names and where they are sought
+bin/aggregate_results.py --results results --dir kleborate=$SHARED/precomputed/03_typing/kleborate
+bin/aggregate_results.py --dir amrfinderplus=/path/a --dir mobsuite=/path/b --outdir combined
+```
+
+`--tool-tables --beside-source` writes each tool table next to its source directory
+(`results/04_amr/amrfinderplus_all.tsv`, `results/03_typing/kleborate_all.tsv`), which is where
+`course/day08.md` expects to find them. Other options: `--sections` to run a subset,
+`--amr-flag NAME=REGEX` to add or drop an AMR flag column, `--kleborate-extra REGEX` to keep more
+Kleborate columns, and `--strict` to exit non-zero when a samplesheet isolate produced nothing.
 
 ## After the pipeline: time-scaled trees with BactDating
 

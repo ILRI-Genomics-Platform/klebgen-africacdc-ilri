@@ -73,6 +73,7 @@ workflow ASSEMBLY {
     graph    = AUTOCYCLER_ASSEMBLE.out.gfa                      // [ meta, gfa ] for Bandage
     checkm2  = ch_checkm2                                       // quality_report.tsv (empty without --checkm2_db)
     multiqc  = QUAST.out.results.map { _meta, dir -> dir }
+    quast    = QUAST.out.tsv                                    // [ meta, tsv ] for bin/aggregate_results.py
 }
 
 //

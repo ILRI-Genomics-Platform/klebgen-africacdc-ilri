@@ -28,6 +28,7 @@
 #     sbatch --export=ALL,COUNTRY=Zimbabwe,TERRA_TSV=/path/to/Zimbabwe_sample.tsv submit_assemblies.sh
 #     sbatch --export=ALL,COUNTRY=Ethiopia,RUN_BAKTA= submit_assemblies.sh      # skip Bakta annotation
 #     sbatch --export=ALL,COUNTRY=Ethiopia,CHECKM2_DB= submit_assemblies.sh     # skip CheckM2
+#     sbatch --export=ALL,COUNTRY=Ethiopia,SKIP_GUBBINS=yes submit_assemblies.sh  # no recombination filtering
 #     COUNTRY=Ethiopia STEPS=samplesheet bash submit_assemblies.sh        # rebuild one samplesheet only
 #
 # Folder layout under DATA_DIR (set DATA_DIR=$SHARED/countries to share it with the participants):
@@ -112,6 +113,11 @@ PHYLO_METHOD="${PHYLO_METHOD:-ska2}"                              # --phylo_meth
 #                   samplesheet = the samplesheet's phylo_group column
 # Isolates without an ST from Kleborate are left out in species and kleborate modes.
 PHYLO_GROUPING="${PHYLO_GROUPING:-species}"
+# --skip_gubbins: no recombination filtering. Gubbins is the slowest phylogeny step, and it needs 3 or more
+# isolates with less than 25% missing data. Set SKIP_GUBBINS=yes to turn it off; with PHYLO_METHOD=ska2 that
+# also makes SKA2 reference-free ('ska align' instead of 'ska map'). Either way the tree is then NOT
+# recombination-corrected, and bin/run_bactdating.R needs useRec = FALSE. See README.md.
+SKIP_GUBBINS="${SKIP_GUBBINS-}"
 AMRFINDER_DB="${AMRFINDER_DB:-${SHARED}/databases/amrfinderplus/amrfinderdb.tar.gz}"   # course/TRAINER_GUIDE.md, 5.1
 # CheckM2 completeness and contamination. On the assembly route this is the only contamination check,
 # because Kraken2 needs reads. Set CHECKM2_DB= (empty) to skip it.
@@ -269,6 +275,7 @@ echo " AMRFinder  : ${AMRFINDER_DB}"
 echo " CheckM2    : ${CHECKM2_DB:-skipped}"
 echo " Bakta      : $([[ -n "${RUN_BAKTA}" ]] && echo "${BAKTA_DB}" || echo skipped)"
 echo " Phylogeny  : ${PHYLO_METHOD}, groups: ${PHYLO_GROUPING} (min ${MIN_GROUP} isolates)"
+echo " Gubbins    : $([[ -n "${SKIP_GUBBINS}" ]] && echo "skipped - tree NOT recombination-corrected" || echo on)"
 echo "================================================="
 
 #-------------------------------------------------------------------------------
@@ -290,6 +297,7 @@ nextflow run "${PIPELINE_DIR}/main.nf" \
     --phylo_min_group_size "${MIN_GROUP}" \
     --phylo_grouping "${PHYLO_GROUPING}" \
     --phylo_method "${PHYLO_METHOD}" \
+    ${SKIP_GUBBINS:+--skip_gubbins} \
     -resume \
     || status=$?
 
