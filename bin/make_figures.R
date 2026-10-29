@@ -36,8 +36,10 @@ script_dir <- dirname(normalizePath(sub("^--file=", "", grep("^--file=", command
 source(file.path(script_dir, "r_setup.R"))
 use_packages(cran = "ggplot2")
 # For the trees and the Sankey diagram; a figure whose packages cannot be installed is skipped
-use_packages(cran = c("ape", "ggnewscale", "ggalluvial"), bioc = c("ggtree", "ComplexHeatmap"), required = FALSE)
+use_packages(cran = c("ape", "ggnewscale", "ggalluvial", "cowplot"), bioc = c("ggtree", "ComplexHeatmap"), required = FALSE)
 suppressPackageStartupMessages(library(ggplot2))
+# Wilke's dviz themes; NEONATAL_FONT overrides the typeface, which falls back when not installed
+source(file.path(script_dir, "dviz_theme.R"))
 
 # ------------------------------------------------------------------------------------------------ options
 args <- commandArgs(trailingOnly = TRUE)
@@ -58,11 +60,14 @@ if (is.na(opt$results) || is.na(opt$metadata)) stop("--results and --metadata ar
 dir.create(opt$outdir, showWarnings = FALSE, recursive = TRUE)
 
 has <- function(pkg) requireNamespace(pkg, quietly = TRUE)
+# grDevices::pdf() cannot encode characters outside its single-byte encoding (an accented ward or
+# species name warns "mbcsToSbcs" and is replaced); cairo_pdf handles UTF-8.
+pdf_device <- if (capabilities("cairo")) grDevices::cairo_pdf else grDevices::pdf
 save_fig <- function(plot, name, width, height) {
-    for (ext in c("pdf", "png")) {
-        ggsave(file.path(opt$outdir, paste0(name, ".", ext)), plot, width = width, height = height, dpi = 300,
-               limitsize = FALSE)
-    }
+    ggsave(file.path(opt$outdir, paste0(name, ".pdf")), plot, width = width, height = height,
+           device = pdf_device, bg = "white", limitsize = FALSE)
+    ggsave(file.path(opt$outdir, paste0(name, ".png")), plot, width = width, height = height,
+           dpi = 300, bg = "white", limitsize = FALSE)
     cat("  wrote", file.path(opt$outdir, paste0(name, ".{pdf,png}")), "\n")
 }
 read_table <- function(f) {
@@ -160,8 +165,9 @@ fig_resistance <- function() {
         geom_col(position = position_dodge(preserve = "single"), width = 0.8) +
         scale_y_continuous(limits = c(0, 100), expand = c(0, 0)) +
         labs(x = NULL, y = ylab, fill = "Species", subtitle = sub) +
-        theme_classic(base_size = 11) +
-        theme(axis.text.x = element_text(angle = 45, hjust = 1), legend.text = element_text(face = "italic"))
+        theme_dviz_hgrid(font_size = 11) +
+        theme(text = element_text(family = dviz_font_family),
+              axis.text.x = element_text(angle = 45, hjust = 1), legend.text = element_text(face = "italic"))
     save_fig(p, "1_resistance_bars", width = max(7, 0.45 * length(unique(agg$drug)) + 3), height = 5)
 }
 
@@ -190,7 +196,8 @@ fig_sunburst <- function() {
         coord_polar() + ylim(0, 4) +
         labs(fill = "Gene (CP = carbapenemase)",
              subtitle = "Inner ring: gene; middle: species; outer: ward (isolates with each gene)") +
-        theme_void(base_size = 11)
+        theme_void(base_size = 11, base_family = dviz_font_family) +
+        theme(text = element_text(family = dviz_font_family))
     save_fig(p, "2_betalactamase_sunburst", width = 8, height = 7)
 }
 
@@ -228,7 +235,8 @@ fig_sankey <- function() {
         scale_x_discrete(limits = c("Replicon / location", "Species", "Gene"), expand = c(0.15, 0.05)) +
         labs(y = "Gene copies (isolate-gene pairs)", fill = "Replicon / location",
              subtitle = "Carbapenemase and ESBL genes: where they sit, and in which species") +
-        theme_minimal(base_size = 11) + theme(panel.grid = element_blank())
+        theme_dviz_open(font_size = 11) +
+        theme(text = element_text(family = dviz_font_family), panel.grid = element_blank())
     save_fig(p, "3_plasmid_sankey", width = 10, height = max(5, 0.25 * nrow(sk) + 3))
 }
 

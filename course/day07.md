@@ -93,6 +93,9 @@ R
 ```
 
 ```r
+source(file.path(Sys.getenv("COURSE"), "bin/r_setup.R"))   # your own library, and install-on-demand
+use_packages(cran = c("ape", "readr", "coda"), github = c(BactDating = "xavierdidelot/BactDating"))
+
 library(ape)
 library(BactDating)
 library(readr)

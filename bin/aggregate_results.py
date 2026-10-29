@@ -6,6 +6,7 @@ Most people want "one row per isolate". That works only for results that ARE one
 isolate, so this script writes several tables instead of forcing everything into one:
 
   master_table.tsv        one row per ISOLATE   (the wide table: joins + chosen summaries)
+  summary_*.tsv           counts and percentages over that table (--summaries)
   <tool>_all.tsv          one row per TOOL ROW  (--tool-tables; the tool's own columns, verbatim)
   amr_genes_long.tsv      one row per GENE HIT  (--long)
   plasmids_long.tsv       one row per PLASMID   (--long)
@@ -762,14 +763,19 @@ def read_phylogeny(dirs, wide, report, threshold):
 
 # --------------------------------------------------------------------------- extras
 
-def read_metadata(path, wide, report):
+def read_metadata(path, wide, report, id_col=None):
     delim = "\t" if str(path).endswith((".tsv", ".txt")) else ","
     rows = read_tsv(path, delimiter=delim)
     if not rows:
         report.problem("no rows read from --metadata %s" % path)
         return
     header = list(rows[0])
-    id_col = next((c for c in ("sample", "id", "Name", "strain") if c in header), header[0])
+    if id_col:
+        if id_col not in header:
+            report.problem("--id-col '%s' is not a column of --metadata; falling back to auto-detect" % id_col)
+            id_col = None
+    if not id_col:
+        id_col = next((c for c in ("sample", "id", "Name", "strain") if c in header), header[0])
     seen = set()
     for row in rows:
         sample = clean_id(row.get(id_col, ""))
@@ -846,6 +852,99 @@ def write_tool_tables(outdir, dirs, beside, na, report):
     return tables
 
 
+FLAG_SUMMARY_COLS = ("esbl_or_ampc", "carbapenemase", "gentamicin_r")
+
+
+def _pct(rows, col):
+    """Percentage of isolates whose flag column is set, over those that have the column at all."""
+    vals = [r.get(col) for r in rows if r.get(col) not in (None, "")]
+    if not vals:
+        return None
+    return round(100.0 * sum(int(v) for v in vals) / len(vals), 1)
+
+
+def _median(rows, col):
+    vals = sorted(float(r[col]) for r in rows if r.get(col) not in (None, ""))
+    if not vals:
+        return None
+    mid = len(vals) // 2
+    return vals[mid] if len(vals) % 2 else (vals[mid - 1] + vals[mid]) / 2
+
+
+def write_summaries(outdir, rows, columns, amr_long, plasmid_long, group_by, na, report):
+    """Counts and percentages over the wide table; one file per summary."""
+    tables = []
+    n = len(rows) or 1
+
+    overall = OrderedDict(isolates=len(rows))
+    if "ST" in columns:
+        overall["with_ST"] = sum(1 for r in rows if r.get("ST") not in (None, ""))
+    for col in FLAG_SUMMARY_COLS:
+        if col in columns:
+            overall["%s_pct" % col] = _pct(rows, col)
+    if "n_plasmids" in columns:
+        overall["median_plasmids"] = _median(rows, "n_plasmids")
+    path = outdir / "summary_overall.tsv"
+    tables.append(("summary_overall", path, write_table(path, [overall], list(overall), na)))
+
+    for col in [c.strip() for c in group_by.split(",") if c.strip()]:
+        if col not in columns:
+            report.problem("--group-by '%s' is not a column; skipped" % col)
+            continue
+        groups = OrderedDict()
+        for row in rows:
+            groups.setdefault(row.get(col) or na, []).append(row)
+        out = []
+        for value, members in sorted(groups.items(), key=lambda kv: -len(kv[1])):
+            entry = OrderedDict([(col, value), ("n", len(members))])
+            for flag in FLAG_SUMMARY_COLS:
+                if flag in columns:
+                    entry["%s_pct" % flag] = _pct(members, flag)
+            if "n_plasmids" in columns:
+                vals = [float(m["n_plasmids"]) for m in members if m.get("n_plasmids") not in (None, "")]
+                entry["mean_plasmids"] = round(sum(vals) / len(vals), 1) if vals else None
+            out.append(entry)
+        path = outdir / ("summary_by_%s.tsv" % col)
+        tables.append(("summary_by_%s" % col, path, write_table(path, out, list(out[0]), na)))
+
+    if amr_long:
+        seen, counts = set(), Counter()
+        classes = {}
+        for row in amr_long:
+            if row.get("element_type") != "AMR":
+                continue
+            key = (row["sample"], row["gene"])
+            if key in seen:
+                continue
+            seen.add(key)
+            counts[row["gene"]] += 1
+            classes.setdefault(row["gene"], row.get("class", ""))
+        out = [OrderedDict([("gene", g), ("class", classes.get(g, "")), ("isolates", c),
+                            ("percent", round(100.0 * c / n, 1))])
+               for g, c in counts.most_common()]
+        path = outdir / "summary_amr_genes.tsv"
+        tables.append(("summary_amr_genes", path, write_table(path, out, list(out[0]) if out else
+                                                              ["gene", "class", "isolates", "percent"], na)))
+
+    for col, name in (("kleborate_K_locus", "summary_k_locus.tsv"),
+                      ("kleborate_O_type", "summary_o_type.tsv")):
+        if col not in columns:
+            continue
+        counts = Counter(r.get(col) or na for r in rows)
+        out = [OrderedDict([(col, v), ("isolates", c), ("percent", round(100.0 * c / n, 1))])
+               for v, c in counts.most_common()]
+        path = outdir / name
+        tables.append((name[:-4], path, write_table(path, out, list(out[0]), na)))
+
+    if plasmid_long:
+        counts = Counter(p.get("primary_cluster_id") or na for p in plasmid_long)
+        out = [OrderedDict([("primary_cluster_id", v), ("plasmids", c)]) for v, c in counts.most_common()]
+        path = outdir / "summary_plasmid_clusters.tsv"
+        tables.append(("summary_plasmid_clusters", path, write_table(path, out, list(out[0]), na)))
+
+    return tables
+
+
 def order_columns(wide, leading):
     seen = list(leading)
     for cols in wide.values():
@@ -900,6 +999,8 @@ def build_parser():
                    help="defines the expected isolates; extras and missing ones are reported")
     p.add_argument("--metadata", metavar="TSV",
                    help="extra per-isolate columns to merge (ward, year, AST, ...)")
+    p.add_argument("--id-col", metavar="NAME",
+                   help="sample ID column in --metadata [auto: sample, id, Name, strain]")
     p.add_argument("--sections", metavar="LIST", default="all",
                    help="comma-separated subset of: " + ",".join(SECTIONS) + ",all [all]")
     p.add_argument("--tool-tables", action="store_true",
@@ -910,6 +1011,12 @@ def build_parser():
                         "(04_amr/amrfinderplus_all.tsv) instead of into --outdir")
     p.add_argument("--long", action="store_true",
                    help="also write the long tables (gene hits, plasmids, SNP pairs)")
+    p.add_argument("--summaries", action="store_true",
+                   help="also write summary_overall.tsv, summary_by_<col>.tsv and the per-gene, "
+                        "per-K-locus, per-O-type and per-plasmid-cluster counts")
+    p.add_argument("--group-by", metavar="LIST", default="ST,kleborate_species",
+                   help="with --summaries, comma-separated columns to summarise by; a column that is "
+                        "not in the table is skipped with a warning [ST,kleborate_species]")
     p.add_argument("--snp-threshold", type=int, default=20, metavar="N",
                    help="for the n_within_<N>_snps column [20]")
     p.add_argument("--amr-flag", action="append", metavar="NAME=REGEX",
@@ -1001,7 +1108,7 @@ def main(argv=None):
     if "phylogeny" in sections:
         snp_long = read_phylogeny(dirs, wide, report, args.snp_threshold)
     if args.metadata:
-        read_metadata(Path(args.metadata), wide, report)
+        read_metadata(Path(args.metadata), wide, report, args.id_col)
 
     expected = samplesheet_ids(Path(args.samplesheet), report) if args.samplesheet else []
     missing = [s for s in expected if s not in wide]
@@ -1030,6 +1137,9 @@ def main(argv=None):
 
     if args.tool_tables:
         tables += write_tool_tables(outdir, dirs, args.beside_source, args.na, report)
+    if args.summaries:
+        tables += write_summaries(outdir, rows, columns, amr_long, plasmid_long,
+                                  args.group_by, args.na, report)
     if args.long:
         for label, name, data in (("amr_genes_long (gene hits)", "amr_genes_long.tsv", amr_long),
                                   ("plasmids_long (plasmids)", "plasmids_long.tsv", plasmid_long),

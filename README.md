@@ -468,7 +468,34 @@ Kleborate columns, and `--strict` to exit non-zero when a samplesheet isolate pr
 BactDating is not part of the pipeline: whether a group can be dated depends on its dates and temporal signal,
 which you should look at first. `bin/run_bactdating.R` runs it for one group from the Gubbins output.
 
-All R scripts in `bin/` (`run_bactdating.R`, `transmission_pairs.R`, `make_figures.R`) are run through
+`bin/make_surveillance_figures.R` draws six panels from the master table, the SNP matrices and (optionally)
+AST, each answering one surveillance question:
+
+| Panel | Question |
+| --- | --- |
+| A | Is the dominant ST turning over? (composition through time) |
+| C | Do SNP distances resolve outbreaks here? (within versus between, per outbreak) |
+| D | Would first-line therapy still work? (empiric regimen coverage, with 95% CI) |
+| E | Is resistance rising? (ESBL/AmpC, carbapenemase, gentamicin by year) |
+| F | How multidrug-resistant are these isolates? (drug classes per isolate) |
+| G | Which genes are new and which are established? (first and last detection) |
+
+Panel D uses measured susceptibility when `--ast` is given and otherwise predicts from resistance genes,
+saying which on the figure. It writes the underlying table beside every figure, so the numbers go in the
+text rather than being read off a plot. A panel whose inputs are missing is skipped with a message.
+This complements `bin/make_figures.R` (resistance prevalence, sunburst, plasmid Sankey, trees, heatmap)
+rather than repeating it.
+
+Both figure scripts use the themes from Wilke's *Fundamentals of Data Visualization*
+(`bin/dviz_theme.R`: `theme_dviz_open`, `theme_dviz_hgrid`, `theme_dviz_vgrid`, built on `cowplot`),
+with a grid line only along the axis that carries the value. The typeface is `Arial Narrow`, which is
+usually **not** installed on Linux: the scripts check once and fall back to the device default rather
+than warning on every text element. Choose another with `--font "Nimbus Sans Narrow"` or by setting
+`NEONATAL_FONT`. Without `cowplot` the themes fall back to ggplot2 equivalents, so figures are still
+drawn.
+
+All R scripts in `bin/` (`run_bactdating.R`, `transmission_pairs.R`, `make_figures.R`,
+`make_surveillance_figures.R`, `aggregate_results.R`) are run through
 `bin/run_R.sh`, which loads one R (module `R/4.5`; `R_MODULE=...` to change) and clears settings left by other R
 installations or conda (the cause of errors like "package 'methods' ... was not found"). Every user installs the
 packages into their own library, `~/R/<platform>-library/<version>` (e.g. `~/R/x86_64-pc-linux-gnu-library/4.5`),
