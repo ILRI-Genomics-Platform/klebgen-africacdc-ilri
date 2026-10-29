@@ -11,3 +11,4 @@ COUNTRY=Ethiopia STEPS="download filter samplesheet" bash submit_assemblies.sh
 chmod -R o+rX,go-w $DATA_DIR
 
 COUNTRY=Morocco STEPS="run" bash submit_assemblies.sh
+sbatch --export=ALL,COUNTRY=Ethiopia,STEPS=run submit_assemblies.sh 

@@ -17,7 +17,8 @@ server before participants arrive.
 7. [Pipeline containers: shared, read-only Singularity images](#7-pipeline-containers-shared-read-only-singularity-images)
    (7.4: phylogeny reference genomes)
 8. [Pre-computed results](#8-pre-computed-results)
-9. [Known gaps and decisions for you](#9-known-gaps-and-decisions-for-you)
+9. [Facilitating the Day 7 IPC role play](#9-facilitating-the-day-7-ipc-role-play)
+10. [Known gaps and decisions for you](#10-known-gaps-and-decisions-for-you)
 
 ---
 
@@ -457,7 +458,7 @@ hold it (section 7.4). If you add an ST39-specific row to the sheet, change the 
 
 ### 8.1 Run the pipeline
 
-Each run takes hours (section 9 has estimates), so the pipeline runs as a Slurm job: it keeps going after you log
+Each run takes hours (section 8.3 has estimates), so the pipeline runs as a Slurm job: it keeps going after you log
 out, and Nextflow submits every step as its own job. `submit_neonatal_amr_reads.sbatch` has a preset for each
 run: it sets the samplesheet, the results folder, a work folder in your own scratch space, and the course's
 shared databases (Kraken2 Standard-8 and AMRFinderPlus from section 5). Both runs build each phylogeny with
@@ -520,7 +521,119 @@ Planning estimates, not measurements: run 3 isolates first and scale from Nextfl
 | Capstone set (5 test isolates, 1 hybrid) | about 2–3 h (the hybrid assembly sets the pace) | about 1.5–2 h |
 | `make_precomputed.sh` after the pipeline run (16 CPUs) | about 2–3 h (Snippy, CheckM2 and Gubbins take most of it) | the same: it runs as one 16-CPU job |
 
-## 9. Known gaps and decisions for you
+## 9. Facilitating the Day 7 IPC role play
+
+Day 7, session 4 (`course/day07.md`). Groups of four — genomics lead, IPC nurse, neonatologist, microbiology lab
+manager — present the ST39 findings to a mock IPC panel: 5 minutes to present, 10 for questions, then two agreed
+actions. Below are model answers for the four scripted questions, each paired with the weak answer groups usually
+give. The contrast is the teaching point; read the weak column before the session so you recognise it live.
+
+The session is about **translating evidence into a decision under uncertainty**, not about recalling tool output.
+A group that gets every SNP number right and recommends nothing has not passed.
+
+### 9.1 The data the groups are working from
+
+| Isolate(s) | Ward | Year | Role in the exercise |
+| --- | --- | --- | --- |
+| Cluster (8 `CAA*`) | Chatinkha Nursery | 2017 | The putative outbreak |
+| `BKR8JH` | Chatinkha Nursery | 2016 | **The hinge**: reservoir vs new introduction |
+| `D29438` | unknown | 2005 | Background ST39 |
+| `BHB7VE` | 4A Female Medical Ward | 2016 | Different ward; carries NDM-1 |
+| `CHI11E` | unknown | 2019 | Hybrid isolate; shares a plasmid with ST45 `CNS1F1` |
+
+Relevant results from earlier days: CTX-M-15 in 21 of 29 isolates; acquired gentamicin resistance genes in most;
+root-to-tip regression on the ST39 group shows **no clear temporal signal**, so the cluster cannot be dated.
+
+### 9.2 "So is it an outbreak or not?"
+
+**Strong.** "Eight isolates from Chatinkha Nursery in 2017 are all ST39 and within the SNP threshold of each other.
+That is consistent with **probable transmission within the neonatal unit**. Whether you call it an outbreak is your
+call, not mine — that depends on your case definition and baseline rate, which genomics does not supply. What I can
+say is that these eight are not independent introductions."
+
+**Weak.** "Yes, it's an outbreak" (not the genomics lead's designation to make), or "the SNPs prove it" (they
+support a hypothesis; they rarely settle it).
+
+**Credit** any group that volunteers the **Snippy vs SKA2 cross-check** without prompting: a pair that is close by
+one method and not the other is at most *possible* transmission until they know why.
+
+### 9.3 "Did it come from one baby, or from the unit itself?"
+
+This is the reservoir-versus-point-source question, and it turns on `BKR8JH`.
+
+**Strong.** "If `BKR8JH` sits within a few SNPs of the 2017 cluster, this lineage was already in the ward in 2016,
+which points to a **persistent reservoir** — sinks, incubators, shared equipment, colonised babies or staff — rather
+than one index baby. If it is far away, the 2017 cluster is more likely a recent introduction that then spread
+between babies. I can tell you which, but I **cannot name an index case**: all eight are from the same year and the
+temporal signal is too weak to date the common ancestor or order the transmissions."
+
+**Weak.** Naming a specific baby as the source, or claiming the tree shows the direction of transmission.
+
+**Credit** two further observations:
+
+- **Tree shape.** Eight isolates in a tight polytomy with near-zero distances fits a common source or rapid spread;
+  a ladder-like topology fits sequential baby-to-baby transmission. With few SNPs the topology is weakly supported,
+  so bootstrap values should be checked before leaning on it.
+- **No environmental or screening samples were taken**, so a reservoir can be neither confirmed nor excluded —
+  which is what motivates the first action below.
+
+### 9.4 "What should we do on Monday morning?"
+
+Actions must be specific and testable. Two good choices, with the reasoning that earns the marks:
+
+1. **Environmental sampling in Chatinkha Nursery** — sinks and drains, incubator water reservoirs, shared
+   equipment; culture on ESBL-selective media, sequence whatever grows, compare with the cluster. This is the one
+   action that can confirm or exclude the reservoir hypothesis `BKR8JH` raises.
+2. **Admission and point-prevalence screening** (rectal swabs) over a defined period. This answers the question
+   IPC will ask next — *is transmission still happening?* — which 2017 isolates cannot.
+
+Also defensible: a hand-hygiene and cleaning audit using **observed** compliance rather than self-report; a review
+of vascular access practice, since these are bloodstream infections; prospective sequencing of new *Klebsiella*
+blood isolates from the unit.
+
+**Weak.** "More training" or "better hand hygiene" with no audit, no denominator and no way to tell whether it
+worked. Push for: what will you measure, and when will you know?
+
+### 9.5 "Will treatment change?"
+
+**Strong.** "For these babies, no — treatment follows their AST, which your lab already has. For the unit's
+**empiric guideline** there is a problem worth reviewing. These isolates carry CTX-M-15 and gentamicin resistance
+genes. Ampicillin is intrinsically ineffective in *K. pneumoniae*, so ampicillin + gentamicin rests on gentamicin
+alone — and that is predicted to fail. CTX-M-15 removes third-generation cephalosporins too. Both first and second
+line are compromised in this lineage, which leaves a carbapenem."
+
+Three caveats separate a good answer from a reckless one, and a group that misses all three should be challenged:
+
+- **This is not a new guideline.** Twenty-nine hand-picked isolates that over-represent clusters cannot give a
+  failure rate. Changing empiric therapy needs the lab's full AST over a defined period, with a denominator, plus
+  stewardship and paediatric input.
+- **Carbapenem resistance is already in the hospital.** `BHB7VE`, from 4A Female Medical Ward, carries NDM-1.
+  Broad carbapenem use in the nursery selects for exactly that.
+- **Amikacin must be checked against AST**, not assumed — the Day 4 major-error discussion, where *aac(6')-Ib-cr*
+  often fails to cross the breakpoint.
+
+### 9.6 An extra card for the lab manager
+
+`CHI11E`'s ~143 kb IncFII(K)/IncR plasmid is about 99.95% identical to the one in `CNS1F1`, a **different ST**. The
+resistance itself moves between lineages. Useful when the panel asks "if we stop this clone, is the problem
+solved?" — the answer is no, and it argues for watching resistance genes and plasmids, not only STs.
+
+### 9.7 Marking the session
+
+**Credit** groups that volunteer the limitations before being asked: only cultured and sequenced isolates are
+visible (colonised babies are not); no environmental or screening samples; year-only dates, so events cannot be
+ordered; a selected training set; SNP thresholds that are guides rather than rules.
+
+> [!TIP]
+> The failure mode to watch for is not only overclaiming. A genomics lead who says "we cannot be certain" four
+> times and recommends nothing has also failed. The target is: state what the data support, state what they do not,
+> and still name two actions.
+
+Practicalities: 15 minutes per group, so with four groups allow an hour plus 15 minutes to agree the actions as a
+whole room. If you are short of time, run two groups in front of everyone and have the rest critique, which works
+better than rushing all four.
+
+## 10. Known gaps and decisions for you
 
 - **No *E. coli* in the training data.** The *E. coli* steps (Day 3, section 3.5) are optional. If you add
   *E. coli* genomes, give them sample IDs starting `EC_` and species `ecoli` in the sample sheet.

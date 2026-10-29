@@ -5,6 +5,10 @@
 //                  The reference sequence is added as 'Reference', so the alignment has the same layout
 //                  as snippy-core's <group>.full.aln and goes through the same steps
 //                  (snippy-clean_full_aln -> Gubbins -> IQ-TREE -> snp-dists).
+//   ska align    : the reference-free alternative, used when no reference is staged (--skip_gubbins with
+//                  --phylo_method ska2). Writes the variant split-k-mer sites only: no 'Reference' row and
+//                  no genome coordinates, so Gubbins cannot run on it and the tree comes straight from
+//                  this alignment (IQ-TREE then needs +ASC).
 //   ska distance : reference-free pairwise SNP distances between the isolates (all shared split k-mers,
 //                  not only those on the reference)
 //
@@ -19,7 +23,7 @@ process SKA2 {
 
     input:
     tuple val(meta), val(ids), val(nfiles), path(seqs, stageAs: 'in???/*')   // nfiles: 2 for reads (R1, R2), 1 for contigs
-    path reference
+    path reference                                                           // [] for a reference-free run (ska align)
 
     output:
     tuple val(meta), path("${prefix}.full.aln")         , emit: full_aln
@@ -43,15 +47,14 @@ process SKA2 {
         lines << ([id] + files[k..<(k + n)].collect { f -> f.toString() }).join('\t')
         k += n
     }
-    """
-    printf '%s\\n' ${lines.collect { line -> "'${line}'" }.join(' ')} > ${prefix}.ska_inputs.tsv
-
-    ska build \\
-        ${args} \\
-        --threads ${task.cpus} \\
-        -f ${prefix}.ska_inputs.tsv \\
-        -o ${prefix}
-
+    // No reference staged: align the split k-mers against each other instead of onto a reference
+    def refFree = !reference || (reference instanceof List && reference.isEmpty())
+    def alignCmd = refFree ?
+        """
+    # Reference-free: variant split-k-mer sites only (no 'Reference' row, no genome coordinates)
+    ska align --threads ${task.cpus} -o ${prefix}.full.aln ${prefix}.skf
+        """ :
+        """
     ska map ${reference} ${prefix}.skf --threads ${task.cpus} -o ${prefix}.ska_map.aln
 
     # Reference first (contigs joined in file order, as ska map does), then the isolates
@@ -65,6 +68,17 @@ process SKA2 {
     # Every sequence must have the reference's length
     awk '/^>/ { if (seq != "") print length(seq); seq = ""; next } { seq = seq \$0 } END { print length(seq) }' ${prefix}.full.aln \\
         | sort -u | awk 'END { if (NR != 1) { print "ERROR: sequences in ${prefix}.full.aln differ in length" > "/dev/stderr"; exit 1 } }'
+        """
+
+    """
+    printf '%s\\n' ${lines.collect { line -> "'${line}'" }.join(' ')} > ${prefix}.ska_inputs.tsv
+
+    ska build \\
+        ${args} \\
+        --threads ${task.cpus} \\
+        -f ${prefix}.ska_inputs.tsv \\
+        -o ${prefix}
+    ${alignCmd}
 
     ska distance --threads ${task.cpus} -o ${prefix}.ska_distances.tsv ${prefix}.skf
     """

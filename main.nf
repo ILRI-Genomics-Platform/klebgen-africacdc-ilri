@@ -150,6 +150,11 @@ def helpMessage() {
                                      also reference-free SNP distances
                                both: both, to compare (SKA2 results: <group>_ska2;
                                      bin/compare_snp_methods.py)       [${params.phylo_method}]
+      --skip_gubbins           No recombination filtering: the tree is built on the
+                               alignment itself and is NOT recombination-corrected.
+                               With --phylo_method ska2 (alone) SKA2 then runs
+                               'ska align' (reference-free) instead of 'ska map'
+                                                                       [${params.skip_gubbins}]
 
     Typing and annotation:
       --skip_kaptive           No standalone Kaptive report (Kleborate

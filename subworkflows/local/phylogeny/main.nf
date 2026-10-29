@@ -58,6 +58,8 @@ workflow PHYLOGENY {
     phylo_references    // CSV group,fasta or null (samplesheet mode)
     min_group_size      // groups smaller than this are skipped
     method              // 'snippy', 'ska2' or 'both'
+    skip_gubbins        // true: no recombination filtering; with 'ska2' alone, SKA2 runs
+                        //       'ska align' (reference-free) instead of 'ska map'
 
     main:
     if (grouping in ['species', 'kleborate']) {
@@ -142,7 +144,10 @@ workflow PHYLOGENY {
     ch_core_aln      = channel.empty()
     ch_ska_distances = channel.empty()
     if (method in ['ska2', 'both']) {
-        // ---- SKA2: one run per group, on all its isolates (reads and/or contigs) and its reference
+        // ---- SKA2: one run per group, on all its isolates (reads and/or contigs) and its reference.
+        // Reference-free only when SKA2 is the sole method: in 'both' mode SKA2 keeps 'ska map' so that its
+        // alignment stays on the same coordinates as Snippy's (bin/compare_snp_methods.py).
+        def skaRefFree = skip_gubbins && method == 'ska2'
         ch_ska_in = ch_reads_grouped
             .map { meta, files -> [meta.phylo_group, meta, files] }
             .combine(ch_kept_groups, by: 0)
@@ -153,8 +158,9 @@ workflow PHYLOGENY {
             .groupTuple()
             .combine(ch_refs, by: 0)
             .multiMap { group, ids, nfiles, files, ref ->
-                ska: [[id: method == 'both' ? "${group}_ska2" : group, group: group, method: 'ska2'], ids, nfiles, files.flatten()]
-                ref: ref
+                ska: [[id: method == 'both' ? "${group}_ska2" : group, group: group, method: 'ska2',
+                       aln_type: skaRefFree ? 'align' : 'map'], ids, nfiles, files.flatten()]
+                ref: skaRefFree ? [] : ref
             }
         SKA2(ch_ska_in.ska, ch_ska_in.ref)
         ch_full_aln      = ch_full_aln.mix(SKA2.out.full_aln)
@@ -196,7 +202,13 @@ workflow PHYLOGENY {
         ch_full_aln      = ch_full_aln.mix(SNIPPY_CORE.out.full_aln)
         ch_core_aln      = SNIPPY_CORE.out.aln
     }
-    SNIPPY_CLEAN(ch_full_aln)
+    // A reference-free 'ska align' alignment holds variant sites only, with no 'Reference' row and no
+    // genome coordinates, so snippy-clean_full_aln and Gubbins do not apply to it.
+    ch_aln = ch_full_aln.branch { meta, _aln ->
+        variant: meta.aln_type == 'align'
+        whole:   true
+    }
+    SNIPPY_CLEAN(ch_aln.whole)
 
     // ---- groups big enough for a tree: alignment = reference + isolates >= 4 sequences.
     // Gubbins drops every isolate with more than 25% missing data (N, '-', '?': its default --filter-percentage)
@@ -211,11 +223,19 @@ workflow PHYLOGENY {
             if (!workflow.stubRun) {
                 def gappy = alignmentMissing(aln).drop(1).findAll { rec -> rec.missing > gubbinsMaxMissing() }
                 if (gappy) {
-                    usable = n - gappy.size()
-                    log.warn "Phylogeny group ${meta.id}: ${gappy.size()} of ${n} isolates have more than " +
-                        "${gubbinsMaxMissing()}% missing data, so Gubbins leaves them out of the tree and SNP distances: " +
-                        gappy.collect { rec -> "${rec.name} (${String.format('%.1f', rec.missing)}%)" }.join(', ') +
-                        ". Check that the reference is the right species (conf/phylo_references.csv) and the isolates' assembly quality."
+                    def named = gappy.collect { rec -> "${rec.name} (${String.format('%.1f', rec.missing)}%)" }.join(', ')
+                    if (skip_gubbins) {
+                        log.warn "Phylogeny group ${meta.id}: ${gappy.size()} of ${n} isolates have more than " +
+                            "${gubbinsMaxMissing()}% missing data: ${named}. With --skip_gubbins they are kept in the tree " +
+                            "and SNP distances, so values involving them are unreliable. Check that the reference is the " +
+                            "right species (conf/phylo_references.csv) and the isolates' assembly quality."
+                    } else {
+                        usable = n - gappy.size()
+                        log.warn "Phylogeny group ${meta.id}: ${gappy.size()} of ${n} isolates have more than " +
+                            "${gubbinsMaxMissing()}% missing data, so Gubbins leaves them out of the tree and SNP distances: " +
+                            named +
+                            ". Check that the reference is the right species (conf/phylo_references.csv) and the isolates' assembly quality."
+                    }
                 }
             }
             [meta, aln, n, usable]
@@ -238,8 +258,27 @@ workflow PHYLOGENY {
     // ---- remove recombination, then build the tree on the filtered SNP sites.
     // nf-core gubbins has no meta map; outputs are named after the input file
     // (<group>.aln), so the group ID is recovered from the file name.
-    GUBBINS(ch_clean.tree.map { _meta, aln -> aln })
-    ch_snps = GUBBINS.out.fasta.map { fasta -> [[id: fasta.name.tokenize('.')[0]], fasta] }
+    // Reference-free alignments cannot go through Gubbins, so they go straight to the tree. 'asc' tells
+    // IQ-TREE the alignment has no constant sites (conf/modules.config).
+    ch_variant = ch_aln.variant
+        .map { meta, aln -> [meta.group, meta + [asc: true], aln] }
+        .combine(ch_group_sizes, by: 0)
+        .branch { _group, meta, aln, n ->
+            tree: n >= 3
+                return [meta, aln]
+            pair: true
+                log.warn "Phylogeny group ${meta.id} has ${n} isolate(s): too few for IQ-TREE (3 or more needed). " +
+                    "Reporting SNP distances only."
+                return [meta, aln]
+        }
+
+    // With --skip_gubbins, Gubbins is given an empty channel and never runs; the tree is then built on the
+    // cleaned alignment itself, which is NOT recombination-corrected.
+    GUBBINS(skip_gubbins ? channel.empty() : ch_clean.tree.map { _meta, aln -> aln })
+    ch_snps = (skip_gubbins
+            ? ch_clean.tree
+            : GUBBINS.out.fasta.map { fasta -> [[id: fasta.name.tokenize('.')[0]], fasta] })
+        .mix(ch_variant.tree)
 
     // A group whose isolates differ by no SNPs outside recombination has an empty filtered alignment, or one
     // whose few columns hold only N, '-' or '?': IQ-TREE stops with "Unknown sequence type". Such a group gets no tree (with a warning), but still its SNP
@@ -255,7 +294,7 @@ workflow PHYLOGENY {
                 return [meta, fasta]
         }
     IQTREE(ch_tree_input.tree.map { meta, fasta -> [meta, fasta, []] }, [], [], [], [], [], [], [], [], [], [], [], [])
-    SNPDISTS(ch_snps.mix(ch_clean.pair))
+    SNPDISTS(ch_snps.mix(ch_clean.pair).mix(ch_variant.pair))
 
     emit:
     core_aln      = ch_core_aln                    // [ meta(group), aln ] (snippy only)
