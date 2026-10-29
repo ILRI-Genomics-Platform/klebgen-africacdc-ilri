@@ -37,10 +37,14 @@ workflow READ_QC {
     ch_multiqc = ch_multiqc.mix(NANOPLOT.out.txt.map { _meta, txt -> txt })
 
     // Species composition (catches mixed cultures and mislabelled isolates)
+    ch_kraken2_report = channel.empty()
+    ch_bracken_report = channel.empty()
     if (kraken2_db) {
         def db = file(kraken2_db, checkIfExists: true)
         KRAKEN2_KRAKEN2(FASTP.out.reads, db, false, false)
         BRACKEN_BRACKEN(KRAKEN2_KRAKEN2.out.report, db)
+        ch_kraken2_report = KRAKEN2_KRAKEN2.out.report
+        ch_bracken_report = BRACKEN_BRACKEN.out.txt
         ch_multiqc = ch_multiqc.mix(KRAKEN2_KRAKEN2.out.report.map { _meta, report -> report })
     } else {
         // warn only when there are reads to check (not for an assembly samplesheet)
@@ -48,7 +52,10 @@ workflow READ_QC {
     }
 
     emit:
-    short_reads = FASTP.out.reads      // [ meta, [ R1, R2 ] ]
-    long_reads  = FILTLONG.out.reads   // [ meta, long_fastq ]
+    short_reads = FASTP.out.reads       // [ meta, [ R1, R2 ] ]
+    long_reads  = FILTLONG.out.reads    // [ meta, long_fastq ]
     multiqc     = ch_multiqc
+    fastp_json  = FASTP.out.json        // [ meta, json ]      for bin/aggregate_results.py
+    kraken2     = ch_kraken2_report     // [ meta, report ]    empty without --kraken2_db
+    bracken     = ch_bracken_report     // [ meta, report ]    empty without --kraken2_db
 }

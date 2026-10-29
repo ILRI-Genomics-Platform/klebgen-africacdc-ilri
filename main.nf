@@ -156,6 +156,12 @@ def helpMessage() {
                                'ska align' (reference-free) instead of 'ska map'
                                                                        [${params.skip_gubbins}]
 
+      --skip_aggregate         No 09_aggregate tables (bin/aggregate_results.py):
+                               master_table.tsv, <tool>_all.tsv, the long tables
+                                                                       [${params.skip_aggregate}]
+      --aggregate_metadata     TSV of extra per-isolate columns to merge into
+                               master_table.tsv (ward, year, AST, ...)  [${params.aggregate_metadata ?: 'not set'}]
+
     Typing and annotation:
       --skip_kaptive           No standalone Kaptive report (Kleborate
                                still reports K/O loci)                 [${params.skip_kaptive}]

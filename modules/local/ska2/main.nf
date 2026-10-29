@@ -8,7 +8,7 @@
 //   ska align    : the reference-free alternative, used when no reference is staged (--skip_gubbins with
 //                  --phylo_method ska2). Writes the variant split-k-mer sites only: no 'Reference' row and
 //                  no genome coordinates, so Gubbins cannot run on it and the tree comes straight from
-//                  this alignment (IQ-TREE then needs +ASC).
+//                  this alignment. It keeps the invariant sites, so IQ-TREE needs no ASC correction.
 //   ska distance : reference-free pairwise SNP distances between the isolates (all shared split k-mers,
 //                  not only those on the reference)
 //
@@ -36,7 +36,9 @@ process SKA2 {
     task.ext.when == null || task.ext.when
 
     script:
-    def args  = task.ext.args ?: ''
+    def args  = task.ext.args  ?: ''      // ska build
+    def args2 = task.ext.args2 ?: ''      // ska align (reference-free) or ska map
+    def args3 = task.ext.args3 ?: ''      // ska distance
     prefix    = task.ext.prefix ?: "${meta.id}"
     def files = seqs instanceof List ? seqs : [seqs]
     // One line per isolate: name <tab> file [<tab> file2]
@@ -51,11 +53,12 @@ process SKA2 {
     def refFree = !reference || (reference instanceof List && reference.isEmpty())
     def alignCmd = refFree ?
         """
-    # Reference-free: variant split-k-mer sites only (no 'Reference' row, no genome coordinates)
-    ska align --threads ${task.cpus} -o ${prefix}.full.aln ${prefix}.skf
+    # Reference-free: no 'Reference' row and no genome coordinates. ska align's own defaults are
+    # --min-freq 0.9 and --filter no-const; ext.args2 (conf/modules.config) changes them.
+    ska align ${args2} --threads ${task.cpus} -o ${prefix}.full.aln ${prefix}.skf
         """ :
         """
-    ska map ${reference} ${prefix}.skf --threads ${task.cpus} -o ${prefix}.ska_map.aln
+    ska map ${args2} ${reference} ${prefix}.skf --threads ${task.cpus} -o ${prefix}.ska_map.aln
 
     # Reference first (contigs joined in file order, as ska map does), then the isolates
     {
@@ -80,7 +83,7 @@ process SKA2 {
         -o ${prefix}
     ${alignCmd}
 
-    ska distance --threads ${task.cpus} -o ${prefix}.ska_distances.tsv ${prefix}.skf
+    ska distance ${args3} --threads ${task.cpus} -o ${prefix}.ska_distances.tsv ${prefix}.skf
     """
 
     stub:

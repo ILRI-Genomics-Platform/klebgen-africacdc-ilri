@@ -9,6 +9,7 @@
 //   BAKTA       -> optional genome annotation (--run_bakta --bakta_db <db>)
 //   TYPING_AMR  -> Modules 3, 4, 5, 7 (typing, AMR/virulence, plasmids, K/O)
 //   PHYLOGENY   -> Module 6   (recombination-aware trees, SNP distances)
+//   AGGREGATE   -> Module 8   (one table per unit of observation; --skip_aggregate)
 //   MULTIQC     -> Module 8   (summary report; integration in R is an exercise)
 //
 
@@ -18,6 +19,7 @@ include { TYPING_AMR } from '../subworkflows/local/typing_amr/main'
 include { PHYLOGENY  } from '../subworkflows/local/phylogeny/main'
 include { PROKKA     } from '../modules/nf-core/prokka/main'
 include { BAKTA_BAKTA } from '../modules/nf-core/bakta/bakta/main'
+include { AGGREGATE_RESULTS } from '../modules/local/aggregate/main'
 include { MULTIQC    } from '../modules/nf-core/multiqc/main'
 
 workflow NEONATAL_AMR {
@@ -51,6 +53,8 @@ workflow NEONATAL_AMR {
 
     TYPING_AMR(ASSEMBLY.out.assembly, params.amrfinderplus_db, params.skip_kaptive)
 
+    ch_snp_distances = channel.empty()
+    ch_ska_distances = channel.empty()
     if (!params.skip_phylogeny) {
         PHYLOGENY(
             // what Snippy (or SKA2) compares: trimmed reads, or the given contigs
@@ -64,6 +68,42 @@ workflow NEONATAL_AMR {
             params.phylo_min_group_size,
             params.phylo_method,
             params.skip_gubbins
+        )
+        ch_snp_distances = PHYLOGENY.out.snp_distances
+        ch_ska_distances = PHYLOGENY.out.ska_distances
+    }
+
+    //
+    // One table per unit of observation (bin/aggregate_results.py). Every source is staged
+    // into the task's work directory, so nothing here reads params.outdir.
+    //
+    if (!params.skip_aggregate) {
+        // Two sources need renaming first: snp-dists writes <group>.tsv and MOB-suite writes
+        // mobtyper_results.txt for every isolate, so the file name alone cannot identify them.
+        ch_snpdists_named = ch_snp_distances
+            .collectFile { meta, tsv -> ["${meta.id}.snp_distances.tsv", tsv.text] }
+        ch_mobtyper_named = TYPING_AMR.out.plasmids
+            .collectFile { meta, txt -> ["${meta.id}.mobtyper.txt", txt.text] }
+
+        def gather = { ch -> ch.map { _meta, f -> f }.collect().ifEmpty([]) }
+
+        AGGREGATE_RESULTS(
+            gather(READ_QC.out.fastp_json),
+            gather(READ_QC.out.kraken2),
+            gather(READ_QC.out.bracken),
+            gather(ASSEMBLY.out.quast),
+            ASSEMBLY.out.checkm2.collect().ifEmpty([]),
+            ch_bakta_mqc.collect().ifEmpty([]),
+            ch_prokka_mqc.collect().ifEmpty([]),
+            gather(TYPING_AMR.out.kleborate),
+            gather(TYPING_AMR.out.kaptive_k.mix(TYPING_AMR.out.kaptive_o)),
+            gather(TYPING_AMR.out.serotype),
+            gather(TYPING_AMR.out.phylogroup),
+            gather(TYPING_AMR.out.amrfinder),
+            ch_mobtyper_named.collect().ifEmpty([]),
+            ch_snpdists_named.mix(ch_ska_distances.map { _meta, f -> f }).collect().ifEmpty([]),
+            file(params.input, checkIfExists: true),
+            params.aggregate_metadata ? file(params.aggregate_metadata, checkIfExists: true) : []
         )
     }
 
