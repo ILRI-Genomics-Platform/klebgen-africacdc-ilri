@@ -33,13 +33,29 @@ the clades of interest shaded and labelled. Three packages do the work: `ggtree`
 adds the rings (`geom_fruit()`), and `ggnewscale` lets one plot carry more than one `fill` scale
 (`new_scale_fill()`) — without it, the second ring would overwrite the first ring's colours.
 
+> [!IMPORTANT]
+> `ggtreeExtra` is new to the course stack. If you installed the R packages before today you will get
+> `there is no package called 'ggtreeExtra'`. Install it once, **on a login node** (compute nodes have no
+> internet):
+>
+> ```bash
+> cd $COURSE && bin/run_R.sh install_r_packages.R
+> ```
+>
+> That re-runs the whole list but only fetches what is missing, so it is quick the second time. The preamble
+> below also installs it on demand, which is the belt to that braces.
+
 ```r
+setwd(Sys.getenv("COURSE"))
+source("bin/r_setup.R")      # your own library, and install-on-demand
+use_packages(cran = c("tidyverse", "ape", "ggnewscale"),
+             bioc = c("ggtree", "ggtreeExtra"))
+
 library(tidyverse)
 library(ape)
 library(ggtree)
 library(ggtreeExtra)   # geom_fruit(): rings of data outside the tips
 library(ggnewscale)    # new_scale_fill(): a second, third, fourth fill scale on one plot
-setwd(Sys.getenv("COURSE"))
 source("bin/dviz_theme.R")   # dviz_font_family, already checked against the fonts installed here
 
 master <- read_tsv("results/08_integration/master_table.tsv")
