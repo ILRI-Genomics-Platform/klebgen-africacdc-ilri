@@ -133,7 +133,7 @@ p <- ggtree(tree, layout = "rectangular", linewidth = 0.5) %<+% ann +
 fig <- p +
   new_scale_fill() +
   geom_fruit(geom = geom_tile, mapping = aes(y = sample, fill = Betalactam),
-             offset = 0.10, pwidth = 0.08, alpha = 0.9, linewidth = 0,
+             offset = 1.0, width = 0.0001, alpha = 0.9, linewidth = 0,
              position = position_identityx()) +
   scale_fill_manual(name = "Beta-lactam",
                     values = c("Carbapenemase" = "#b2182b",
@@ -143,13 +143,13 @@ fig <- p +
                     guide = guide_legend(order = 2, override.aes = list(size = 4))) +
   new_scale_fill() +
   geom_fruit(geom = geom_tile, mapping = aes(y = sample, fill = K_group),
-             offset = 0.05, pwidth = 0.08, alpha = 0.9, linewidth = 0,
+             offset = 0.25, width = 0.0001, alpha = 0.9, linewidth = 0,
              position = position_identityx()) +
   scale_fill_brewer(name = "K locus", palette = "Set3", na.value = "grey90",
                     guide = guide_legend(order = 3, ncol = 2)) +
   new_scale_fill() +
   geom_fruit(geom = geom_tile, mapping = aes(y = sample, fill = Year),
-             offset = 0.05, pwidth = 0.08, alpha = 0.9, linewidth = 0,
+             offset = 0.25, pwidth = 0.0001, alpha = 0.9, linewidth = 0,
              position = position_identityx()) +
   scale_fill_viridis_d(name = "Year", option = "D", na.value = "grey90",
                        guide = guide_legend(order = 4)) +
