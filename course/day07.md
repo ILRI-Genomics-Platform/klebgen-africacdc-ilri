@@ -93,7 +93,8 @@ R
 ```
 
 ```r
-source(file.path(Sys.getenv("COURSE"), "bin/r_setup.R"))   # your own library, and install-on-demand
+# bin/ is in the pipeline folder, not in your own $COURSE folder
+source(file.path(Sys.getenv("SHARED"), "neonatal-amr-nf/bin/r_setup.R"))   # library + install-on-demand
 use_packages(cran = c("ape", "readr", "coda"), github = c(BactDating = "xavierdidelot/BactDating"))
 
 library(ape)

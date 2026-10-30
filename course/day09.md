@@ -39,15 +39,22 @@ adds the rings (`geom_fruit()`), and `ggnewscale` lets one plot carry more than 
 > internet):
 >
 > ```bash
-> cd $COURSE && bin/run_R.sh install_r_packages.R
+> $SHARED/neonatal-amr-nf/bin/run_R.sh install_r_packages.R
 > ```
 >
 > That re-runs the whole list but only fetches what is missing, so it is quick the second time. The preamble
 > below also installs it on demand, which is the belt to that braces.
+>
+> The scripts live in the **pipeline** folder, `$SHARED/neonatal-amr-nf`, not in your own `$COURSE` folder,
+> so give the full path. `bin/run_R.sh: No such file or directory` means you ran it from somewhere with no
+> `bin/` in it; `echo $SHARED` should print a path, and the wrapper finds `install_r_packages.R` next to
+> itself from wherever you call it.
 
 ```r
-setwd(Sys.getenv("COURSE"))
-source("bin/r_setup.R")      # your own library, and install-on-demand
+P <- file.path(Sys.getenv("SHARED"), "neonatal-amr-nf")   # the pipeline folder: the scripts in bin/
+setwd(Sys.getenv("COURSE"))                               # your own folder: results/ and training_data/
+
+source(file.path(P, "bin/r_setup.R"))   # your own library, and install-on-demand
 use_packages(cran = c("tidyverse", "ape", "ggnewscale"),
              bioc = c("ggtree", "ggtreeExtra"))
 
@@ -56,7 +63,7 @@ library(ape)
 library(ggtree)
 library(ggtreeExtra)   # geom_fruit(): rings of data outside the tips
 library(ggnewscale)    # new_scale_fill(): a second, third, fourth fill scale on one plot
-source("bin/dviz_theme.R")   # dviz_font_family, already checked against the fonts installed here
+source(file.path(P, "bin/dviz_theme.R"))   # dviz_font_family, checked against the fonts installed here
 
 master <- read_tsv("results/08_integration/master_table.tsv")
 tree   <- read.tree("results/06_phylogeny/ST39/ST39.treefile")

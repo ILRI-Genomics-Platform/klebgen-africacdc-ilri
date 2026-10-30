@@ -342,10 +342,13 @@ glimpse(master)
 > The pipeline already runs the Python one at the end of a run, unless you pass `--skip_aggregate`.
 >
 > ```bash
-> bin/aggregate_results.py --results results --metadata training_data/metadata_compact.tsv \
+> cd $COURSE                        # your own folder: results/ and training_data/ are here
+> P=$SHARED/neonatal-amr-nf         # the pipeline folder: the scripts are here
+>
+> $P/bin/aggregate_results.py --results results --metadata training_data/metadata_compact.tsv \
 >     --summaries --group-by ST,kleborate_species,ward --long
 >
-> bin/run_R.sh aggregate_results.R --results results --metadata training_data/metadata_compact.tsv \
+> $P/bin/run_R.sh aggregate_results.R --results results --metadata training_data/metadata_compact.tsv \
 >     --summaries --group-by ST,kleborate_species,ward --long
 > ```
 >
